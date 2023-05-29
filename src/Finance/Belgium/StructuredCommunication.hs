@@ -16,10 +16,13 @@ import Data.Text(Text, pack)
 import Data.Validity(Validity(validate), check)
 import Data.Word(Word16, Word32)
 
+import Language.Haskell.TH.Quote(QuasiQuoter(QuasiQuoter))
+
 import Test.QuickCheck.Arbitrary(Arbitrary(arbitrary))
 import Test.QuickCheck.Gen(chooseBoundedIntegral)
 
 import Text.Parsec.Char(char, digit, space)
+import Text.Parsec.Combinator(eof)
 import Text.Parsec.Prim(ParsecT, Stream, skipMany, try)
 import Text.Printf(printf)
 
@@ -49,6 +52,13 @@ instance Arbitrary StructuredCommunication where
 instance Bounded StructuredCommunication where
   minBound = fixChecksum (StructuredCommunication 0 0 0)
   maxBound = fixChecksum (StructuredCommunication 999 9999 99900)
+
+instance Enum StructuredCommunication where
+  fromEnum (StructuredCommunication v0 v1 v2) = fromIntegral v0 * 10000000 + fromIntegral v1 * 1000 + fromIntegral (v2 `div` 100)
+  toEnum v = fixChecksum (StructuredCommunication (fromIntegral v0) (fromIntegral v1) (fromIntegral v2))
+    where v2 = (v `mod` 1000) * 100
+          v1 = (v `div` 1000) `mod` 10000
+          v0 = v `div` 10000000
 
 -- instance Enum StructuredCommunication where
 
@@ -102,3 +112,9 @@ _space = skipMany space
 
 parseCommunication :: Stream s m Char => ParsecT s u m StructuredCommunication
 parseCommunication = StructuredCommunication <$> (_presuf *> _space *> _parseNatWidth 3 <* _slash) <*> (_parseNatWidth 4 <* _slash) <*> (_parseNatWidth 5 <* _space <* _presuf)
+
+parseCommunication' :: Stream s m Char => ParsecT s u m StructuredCommunication
+parseCommunication' = parseCommunication <* eof
+
+beCommunicaton :: QuasiQuoter
+beCommunicaton = QuasiQuoter {}

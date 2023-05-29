@@ -23,6 +23,7 @@ library
     , binary >= 0.2
     , parsec >=3.0
     , QuickCheck >=2.1
+    , template-haskell >=2.3.0.0
     , text >= 0.1
     , validity >= 0.4.0.0
   default-language:    Haskell2010
