@@ -34,17 +34,17 @@ data StructuredCommunication
   } deriving (Eq, Ord, Read, Show)
 
 checksum :: StructuredCommunication -> Word32
-checksum (StructuredCommunication _ _ v2) = v2 `mod` 100
+checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
 
 _rcheck :: Integral i => Integer -> i -> Bool
 _rcheck mx = go
   where go v = 0 <= i && i <= mx where i = fromIntegral v
 
 structuredCommunication :: (Integral i, Integral j, Integral k) => i -> j -> k -> Maybe StructuredCommunication
-structuredCommunication v0 v1 v2
-  | _rcheck 999 v0 && _rcheck 9999 v1 && _rcheck 99948 v2 && validChecksum s = Just s
+structuredCommunication v₀ v₁ v₂
+  | _rcheck 999 v₀ && _rcheck 9999 v₁ && _rcheck 99948 v₂ && validChecksum s = Just s
   | otherwise = Nothing
-  where s = StructuredCommunication (fromIntegral v0) (fromIntegral v1) (fromIntegral v2)
+  where s = StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂)
 
 instance Arbitrary StructuredCommunication where
   arbitrary = fixChecksum <$> (StructuredCommunication <$> chooseBoundedIntegral (0, 999) <*> chooseBoundedIntegral (0, 9999) <*> ((100*) <$> chooseBoundedIntegral (0, 999)))
@@ -54,44 +54,44 @@ instance Bounded StructuredCommunication where
   maxBound = fixChecksum (StructuredCommunication 999 9999 99900)
 
 instance Enum StructuredCommunication where
-  fromEnum (StructuredCommunication v0 v1 v2) = fromIntegral v0 * 10000000 + fromIntegral v1 * 1000 + fromIntegral (v2 `div` 100)
-  toEnum v = fixChecksum (StructuredCommunication (fromIntegral v0) (fromIntegral v1) (fromIntegral v2))
-    where v2 = (v `mod` 1000) * 100
-          v1 = (v `div` 1000) `mod` 10000
-          v0 = v `div` 10000000
+  fromEnum (StructuredCommunication v₀ v₁ v₂) = fromIntegral v₀ * 10000000 + fromIntegral v₁ * 1000 + fromIntegral (v₂ `div` 100)
+  toEnum v = fixChecksum (StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂))
+    where v₂ = (v `mod` 1000) * 100
+          v₁ = (v `div` 1000) `mod` 10000
+          v₀ = v `div` 10000000
 
 -- instance Enum StructuredCommunication where
 
 instance Binary StructuredCommunication where
   get = StructuredCommunication <$> get <*> get <*> get
-  put (StructuredCommunication v0 v1 v2) = put v0 >> put v1 >> put v2
+  put (StructuredCommunication v₀ v₁ v₂) = put v₀ >> put v₁ >> put v₂
 
 instance Validity StructuredCommunication where
-  validate s@(StructuredCommunication v0 v1 v2) =
-         check (v0 <= 999)   "first sequence larger has more than three digits."
-      <> check (v1 <= 9999)  "second sequence larger has more than four digits."
-      <> check (v2 <= 99999) "third sequence larger has more than five digits."
+  validate s@(StructuredCommunication v₀ v₁ v₂) =
+         check (v₀ <= 999)   "first sequence larger has more than three digits."
+      <> check (v₁ <= 9999)  "second sequence larger has more than four digits."
+      <> check (v₂ <= 99999) "third sequence larger has more than five digits."
       <> check (0 < c && c <= 97) "checksum out of the 1–97 range."
       <> check (determineCheckSum s == c) "checksum does not match."
         where c = checksum s
 
 determineCheckSum :: StructuredCommunication -> Word32
-determineCheckSum (StructuredCommunication v0 v1 v2)
-  | cs2 == 0 = 97
-  | otherwise = cs2
-  where cs0 = v0 `mod` 97
-        cs1 = (cs0 * 9 + v1) `mod` 97                            -- 10000 `mod` 97 ==  9  (shift four decimal places)
-        cs2 = (fromIntegral cs1 * 30 + v2 `div` 100) `mod` 97    --  1000 `mod` 97 == 30  (shift three decimal places)
+determineCheckSum (StructuredCommunication v₀ v₁ v₂)
+  | cs₂ == 0 = 97
+  | otherwise = cs₂
+  where cs₀ = v₀ `mod` 97
+        cs₁ = (cs₀ * 9 + v₁) `mod` 97                            -- 10000 `mod` 97 ==  9  (shift four decimal places)
+        cs₂ = (fromIntegral cs₁ * 30 + v₂ `div` 100) `mod` 97    --  1000 `mod` 97 == 30  (shift three decimal places)
 
 validChecksum :: StructuredCommunication -> Bool
-validChecksum s@(StructuredCommunication _ _ v2) = determineCheckSum s == v2 `mod` 100
+validChecksum s@(StructuredCommunication _ _ v₂) = determineCheckSum s == v₂ `mod` 100
 
 
 fixChecksum :: StructuredCommunication -> StructuredCommunication
-fixChecksum s@(StructuredCommunication _ _ v2) = s { third=v2 - (v2 `mod` 100) + determineCheckSum s }
+fixChecksum s@(StructuredCommunication _ _ v₂) = s { third=v₂ - (v₂ `mod` 100) + determineCheckSum s }
 
 communicationToText :: StructuredCommunication -> Text
-communicationToText (StructuredCommunication v0 v1 v2) = "+++" <> p "%03d" v0 <> "/" <> p "%04d" v1 <> "/" <> p "%05d" v2 <> "+++"
+communicationToText (StructuredCommunication v₀ v₁ v₂) = "+++" <> p "%03d" v₀ <> "/" <> p "%04d" v₁ <> "/" <> p "%05d" v₂ <> "+++"
   where p f = pack . printf f
 
 _parseNatWidth :: (Integral i, Stream s m Char) => Int -> ParsecT s u m i
