@@ -117,4 +117,6 @@ parseCommunication' :: Stream s m Char => ParsecT s u m StructuredCommunication
 parseCommunication' = parseCommunication <* eof
 
 beCommunicaton :: QuasiQuoter
-beCommunicaton = QuasiQuoter {}
+beCommunicaton = QuasiQuoter {
+    -- quoteExp = parseCommunication'
+  }
