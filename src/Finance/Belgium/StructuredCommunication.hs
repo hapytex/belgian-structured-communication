@@ -121,7 +121,6 @@ parseCommunication = StructuredCommunication <$> (_presuf *> _space *> _parseNat
 parseCommunication' :: Stream s m Char => ParsecT s u m StructuredCommunication
 parseCommunication' = parseCommunication <* eof
 
-<<<<<<< HEAD
 _liftEither :: MonadFail m => Either String a -> m a
 _liftEither = either fail pure
 
