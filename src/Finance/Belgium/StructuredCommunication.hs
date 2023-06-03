@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, FlexibleContexts, OverloadedStrings #-}
 
 module Finance.Belgium.StructuredCommunication (
     StructuredCommunication
@@ -12,18 +12,23 @@ import Control.Monad(replicateM_)
 
 import Data.Binary(Binary(get, put))
 import Data.Char(digitToInt)
+import Data.Data(Data)
+import Data.Either(either)
 import Data.Text(Text, pack)
+import Data.Typeable(Typeable)
 import Data.Validity(Validity(validate), check)
 import Data.Word(Word16, Word32)
 
-import Language.Haskell.TH.Quote(QuasiQuoter(QuasiQuoter))
+import GHC.Generics(Generic)
+
+import Language.Haskell.TH.Quote(QuasiQuoter(QuasiQuoter, quoteExp))
 
 import Test.QuickCheck.Arbitrary(Arbitrary(arbitrary))
 import Test.QuickCheck.Gen(chooseBoundedIntegral)
 
 import Text.Parsec.Char(char, digit, space)
 import Text.Parsec.Combinator(eof)
-import Text.Parsec.Prim(ParsecT, Stream, skipMany, try)
+import Text.Parsec.Prim(ParsecT, Stream, runParser, skipMany, try)
 import Text.Printf(printf)
 
 data StructuredCommunication
@@ -31,7 +36,7 @@ data StructuredCommunication
     first :: !Word16
   , second :: !Word16
   , third :: !Word32
-  } deriving (Eq, Ord, Read, Show)
+  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
 checksum :: StructuredCommunication -> Word32
 checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
@@ -116,5 +121,10 @@ parseCommunication = StructuredCommunication <$> (_presuf *> _space *> _parseNat
 parseCommunication' :: Stream s m Char => ParsecT s u m StructuredCommunication
 parseCommunication' = parseCommunication <* eof
 
-beCommunicaton :: QuasiQuoter
-beCommunicaton = QuasiQuoter {}
+_liftEither :: MonadFail m => Either String a -> m a
+_liftEither = either fail pure
+
+beCommunication :: QuasiQuoter
+beCommunication = QuasiQuoter {
+    quoteExp=_liftEither . runParser parseCommunication' () ""
+  }
