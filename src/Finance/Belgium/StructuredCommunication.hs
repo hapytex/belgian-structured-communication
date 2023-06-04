@@ -116,8 +116,12 @@ _parseNatWidth m
     go 0 v = pure v
     go n v = digit >>= go (n -1) . ((10 * v) +) . fromIntegral . digitToInt
 
-_presuf :: Stream s m Char => ParsecT s u m ()
-_presuf = try (replicateM_ 3 (char '+')) <|> replicateM_ 3 (char '*')
+_char3 :: Stream s m Char => Char -> ParsecT s u m Char
+_char3 c = c' <* c' <* c'
+  where c' = char c
+
+_presuf :: Stream s m Char => ParsecT s u m Char
+_presuf = try (_char3 '+') <|> (_char3 '*')
 
 _slash :: Stream s m Char => ParsecT s u m Char
 _slash = _space *> char '/' <* _space
@@ -126,7 +130,12 @@ _space :: Stream s m Char => ParsecT s u m ()
 _space = skipMany space
 
 parseCommunication :: Stream s m Char => ParsecT s u m StructuredCommunication
-parseCommunication = StructuredCommunication <$> (_presuf *> _space *> _parseNatWidth 3 <* _slash) <*> (_parseNatWidth 4 <* _slash) <*> (_parseNatWidth 5 <* _space <* _presuf)
+parseCommunication = do
+  c <- _presuf <* _space
+  c1 <- _parseNatWidth 3 <* _slash
+  c2 <- _parseNatWidth 4 <* _slash
+  c3 <- _parseNatWidth 5
+  StructuredCommunication c1 c2 c3 <$ _space <* _char3 c
 
 parseCommunication' :: Stream s m Char => ParsecT s u m StructuredCommunication
 parseCommunication' = parseCommunication <* eof
