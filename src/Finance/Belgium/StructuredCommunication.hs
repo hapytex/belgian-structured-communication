@@ -5,23 +5,25 @@ module Finance.Belgium.StructuredCommunication (
   , structuredCommunication
   , checksum
   , communicationToText, parseCommunication
+  , beCommunication
   ) where
 
 import Control.Applicative((<|>))
-import Control.Monad(replicateM_)
+import Control.Monad((>=>), replicateM_)
 
 import Data.Binary(Binary(get, put))
 import Data.Char(digitToInt)
 import Data.Data(Data)
-import Data.Either(either)
+-- import Data.Either(either)
 import Data.Text(Text, pack)
 import Data.Typeable(Typeable)
-import Data.Validity(Validity(validate), check)
+import Data.Validity(Validity(validate), check, prettyValidate)
 import Data.Word(Word16, Word32)
 
 import GHC.Generics(Generic)
 
 import Language.Haskell.TH.Quote(QuasiQuoter(QuasiQuoter, quoteExp))
+import Language.Haskell.TH.Syntax(Lift(lift))
 
 import Test.QuickCheck.Arbitrary(Arbitrary(arbitrary))
 import Test.QuickCheck.Gen(chooseBoundedIntegral)
@@ -37,6 +39,8 @@ data StructuredCommunication
   , second :: !Word16
   , third :: !Word32
   } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+
+instance Lift StructuredCommunication
 
 checksum :: StructuredCommunication -> Word32
 checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
@@ -121,10 +125,10 @@ parseCommunication = StructuredCommunication <$> (_presuf *> _space *> _parseNat
 parseCommunication' :: Stream s m Char => ParsecT s u m StructuredCommunication
 parseCommunication' = parseCommunication <* eof
 
-_liftEither :: MonadFail m => Either String a -> m a
-_liftEither = either fail pure
+_liftEither :: Show s => MonadFail m => Either s a -> m a
+_liftEither = either (fail . show) pure
 
 beCommunication :: QuasiQuoter
 beCommunication = QuasiQuoter {
-    quoteExp=_liftEither . runParser parseCommunication' () ""
+    quoteExp=(_liftEither >=> either fail pure . prettyValidate >=> lift) . runParser parseCommunication' () ""
   }
