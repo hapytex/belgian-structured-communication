@@ -1,44 +1,44 @@
-{-# LANGUAGE DeriveDataTypeable, DeriveGeneric, FlexibleContexts, OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module Finance.Belgium.StructuredCommunication (
-    StructuredCommunication
-  , structuredCommunication
-  , checksum
-  , communicationToText, parseCommunication
-  , beCommunication
-  ) where
+module Finance.Belgium.StructuredCommunication
+  ( StructuredCommunication,
+    structuredCommunication,
+    checksum,
+    communicationToText,
+    parseCommunication,
+    beCommunication,
+  )
+where
 
-import Control.Applicative((<|>))
-import Control.Monad((>=>), replicateM_)
-
-import Data.Binary(Binary(get, put))
-import Data.Char(digitToInt)
-import Data.Data(Data)
+import Control.Applicative ((<|>))
+import Control.Monad (replicateM_, (>=>))
+import Data.Binary (Binary (get, put))
+import Data.Char (digitToInt)
+import Data.Data (Data)
 -- import Data.Either(either)
-import Data.Text(Text, pack)
-import Data.Typeable(Typeable)
-import Data.Validity(Validity(validate), check, prettyValidate)
-import Data.Word(Word16, Word32)
+import Data.Text (Text, pack)
+import Data.Typeable (Typeable)
+import Data.Validity (Validity (validate), check, prettyValidate)
+import Data.Word (Word16, Word32)
+import GHC.Generics (Generic)
+import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter, quoteExp))
+import Language.Haskell.TH.Syntax (Lift (lift))
+import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
+import Test.QuickCheck.Gen (chooseBoundedIntegral)
+import Text.Parsec.Char (char, digit, space)
+import Text.Parsec.Combinator (eof)
+import Text.Parsec.Prim (ParsecT, Stream, runParser, skipMany, try)
+import Text.Printf (printf)
 
-import GHC.Generics(Generic)
-
-import Language.Haskell.TH.Quote(QuasiQuoter(QuasiQuoter, quoteExp))
-import Language.Haskell.TH.Syntax(Lift(lift))
-
-import Test.QuickCheck.Arbitrary(Arbitrary(arbitrary))
-import Test.QuickCheck.Gen(chooseBoundedIntegral)
-
-import Text.Parsec.Char(char, digit, space)
-import Text.Parsec.Combinator(eof)
-import Text.Parsec.Prim(ParsecT, Stream, runParser, skipMany, try)
-import Text.Printf(printf)
-
-data StructuredCommunication
-  = StructuredCommunication {
-    first :: !Word16
-  , second :: !Word16
-  , third :: !Word32
-  } deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+data StructuredCommunication = StructuredCommunication
+  { first :: !Word16,
+    second :: !Word16,
+    third :: !Word32
+  }
+  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
 instance Lift StructuredCommunication
 
@@ -47,16 +47,18 @@ checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
 
 _rcheck :: Integral i => Integer -> i -> Bool
 _rcheck mx = go
-  where go v = 0 <= i && i <= mx where i = fromIntegral v
+  where
+    go v = 0 <= i && i <= mx where i = fromIntegral v
 
 structuredCommunication :: (Integral i, Integral j, Integral k) => i -> j -> k -> Maybe StructuredCommunication
 structuredCommunication v₀ v₁ v₂
   | _rcheck 999 v₀ && _rcheck 9999 v₁ && _rcheck 99948 v₂ && validChecksum s = Just s
   | otherwise = Nothing
-  where s = StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂)
+  where
+    s = StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂)
 
 instance Arbitrary StructuredCommunication where
-  arbitrary = fixChecksum <$> (StructuredCommunication <$> chooseBoundedIntegral (0, 999) <*> chooseBoundedIntegral (0, 9999) <*> ((100*) <$> chooseBoundedIntegral (0, 999)))
+  arbitrary = fixChecksum <$> (StructuredCommunication <$> chooseBoundedIntegral (0, 999) <*> chooseBoundedIntegral (0, 9999) <*> ((100 *) <$> chooseBoundedIntegral (0, 999)))
 
 instance Bounded StructuredCommunication where
   minBound = fixChecksum (StructuredCommunication 0 0 0)
@@ -65,9 +67,10 @@ instance Bounded StructuredCommunication where
 instance Enum StructuredCommunication where
   fromEnum (StructuredCommunication v₀ v₁ v₂) = fromIntegral v₀ * 10000000 + fromIntegral v₁ * 1000 + fromIntegral (v₂ `div` 100)
   toEnum v = fixChecksum (StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂))
-    where v₂ = (v `mod` 1000) * 100
-          v₁ = (v `div` 1000) `mod` 10000
-          v₀ = v `div` 10000000
+    where
+      v₂ = (v `mod` 1000) * 100
+      v₁ = (v `div` 1000) `mod` 10000
+      v₀ = v `div` 10000000
 
 -- instance Enum StructuredCommunication where
 
@@ -77,38 +80,41 @@ instance Binary StructuredCommunication where
 
 instance Validity StructuredCommunication where
   validate s@(StructuredCommunication v₀ v₁ v₂) =
-         check (v₀ <= 999)   "first sequence larger has more than three digits."
-      <> check (v₁ <= 9999)  "second sequence larger has more than four digits."
+    check (v₀ <= 999) "first sequence larger has more than three digits."
+      <> check (v₁ <= 9999) "second sequence larger has more than four digits."
       <> check (v₂ <= 99999) "third sequence larger has more than five digits."
       <> check (0 < c && c <= 97) "checksum out of the 1–97 range."
       <> check (determineCheckSum s == c) "checksum does not match."
-        where c = checksum s
+    where
+      c = checksum s
 
 determineCheckSum :: StructuredCommunication -> Word32
 determineCheckSum (StructuredCommunication v₀ v₁ v₂)
   | cs₂ == 0 = 97
   | otherwise = cs₂
-  where cs₀ = v₀ `mod` 97
-        cs₁ = (cs₀ * 9 + v₁) `mod` 97                            -- 10000 `mod` 97 ==  9  (shift four decimal places)
-        cs₂ = (fromIntegral cs₁ * 30 + v₂ `div` 100) `mod` 97    --  1000 `mod` 97 == 30  (shift three decimal places)
+  where
+    cs₀ = v₀ `mod` 97
+    cs₁ = (cs₀ * 9 + v₁) `mod` 97 -- 10000 `mod` 97 ==  9  (shift four decimal places)
+    cs₂ = (fromIntegral cs₁ * 30 + v₂ `div` 100) `mod` 97 --  1000 `mod` 97 == 30  (shift three decimal places)
 
 validChecksum :: StructuredCommunication -> Bool
 validChecksum s@(StructuredCommunication _ _ v₂) = determineCheckSum s == v₂ `mod` 100
 
-
 fixChecksum :: StructuredCommunication -> StructuredCommunication
-fixChecksum s@(StructuredCommunication _ _ v₂) = s { third=v₂ - (v₂ `mod` 100) + determineCheckSum s }
+fixChecksum s@(StructuredCommunication _ _ v₂) = s {third = v₂ - (v₂ `mod` 100) + determineCheckSum s}
 
 communicationToText :: StructuredCommunication -> Text
 communicationToText (StructuredCommunication v₀ v₁ v₂) = "+++" <> p "%03d" v₀ <> "/" <> p "%04d" v₁ <> "/" <> p "%05d" v₂ <> "+++"
-  where p f = pack . printf f
+  where
+    p f = pack . printf f
 
 _parseNatWidth :: (Integral i, Stream s m Char) => Int -> ParsecT s u m i
 _parseNatWidth m
   | m >= 0 = go m 0
   | otherwise = fail "negative number of digits"
-  where go 0 v = pure v
-        go n v = digit >>= go (n-1) . ((10*v)+) . fromIntegral . digitToInt
+  where
+    go 0 v = pure v
+    go n v = digit >>= go (n -1) . ((10 * v) +) . fromIntegral . digitToInt
 
 _presuf :: Stream s m Char => ParsecT s u m ()
 _presuf = try (replicateM_ 3 (char '+')) <|> replicateM_ 3 (char '*')
@@ -129,6 +135,7 @@ _liftEither :: Show s => MonadFail m => Either s a -> m a
 _liftEither = either (fail . show) pure
 
 beCommunication :: QuasiQuoter
-beCommunication = QuasiQuoter {
-    quoteExp=(_liftEither >=> either fail pure . prettyValidate >=> lift) . runParser parseCommunication' () ""
-  }
+beCommunication =
+  QuasiQuoter
+    { quoteExp = (_liftEither >=> either fail pure . prettyValidate >=> lift) . runParser parseCommunication' () ""
+    }
