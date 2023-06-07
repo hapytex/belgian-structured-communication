@@ -42,9 +42,10 @@ data StructuredCommunication = StructuredCommunication
   deriving (Data, Eq, Generic, Ord, Read, Typeable)
 
 instance Show StructuredCommunication where
-    show c = "[beCommunication|" <> communicationToString c <> "|]"
+  show c = "[beCommunication|" <> communicationToString c <> "|]"
 
 instance Hashable StructuredCommunication
+
 instance Lift StructuredCommunication
 
 checksum :: StructuredCommunication -> Word32
@@ -124,7 +125,8 @@ _parseNatWidth m
 
 _char3 :: Stream s m Char => Char -> ParsecT s u m Char
 _char3 c = c' <* c' <* c'
-  where c' = char c
+  where
+    c' = char c
 
 _presuf :: Stream s m Char => ParsecT s u m Char
 _presuf = try (_char3 '+') <|> (_char3 '*')
