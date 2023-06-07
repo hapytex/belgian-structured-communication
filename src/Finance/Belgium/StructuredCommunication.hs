@@ -18,6 +18,7 @@ import Control.Monad (replicateM_, (>=>))
 import Data.Binary (Binary (get, put))
 import Data.Char (digitToInt)
 import Data.Data (Data)
+import Data.Hashable (Hashable)
 -- import Data.Either(either)
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
@@ -38,8 +39,12 @@ data StructuredCommunication = StructuredCommunication
     second :: !Word16,
     third :: !Word32
   }
-  deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+  deriving (Data, Eq, Generic, Ord, Read, Typeable)
 
+instance Show StructuredCommunication where
+    show c = "[beCommunication|" <> communicationToString c <> "|]"
+
+instance Hashable StructuredCommunication
 instance Lift StructuredCommunication
 
 checksum :: StructuredCommunication -> Word32
@@ -103,10 +108,11 @@ validChecksum s@(StructuredCommunication _ _ v₂) = determineCheckSum s == v₂
 fixChecksum :: StructuredCommunication -> StructuredCommunication
 fixChecksum s@(StructuredCommunication _ _ v₂) = s {third = v₂ - (v₂ `mod` 100) + determineCheckSum s}
 
+communicationToString :: StructuredCommunication -> String
+communicationToString (StructuredCommunication v₀ v₁ v₂) = "+++" <> printf "%03d" v₀ <> "/" <> printf "%04d" v₁ <> "/" <> printf "%05d" v₂ <> "+++"
+
 communicationToText :: StructuredCommunication -> Text
-communicationToText (StructuredCommunication v₀ v₁ v₂) = "+++" <> p "%03d" v₀ <> "/" <> p "%04d" v₁ <> "/" <> p "%05d" v₂ <> "+++"
-  where
-    p f = pack . printf f
+communicationToText = pack . communicationToString
 
 _parseNatWidth :: (Integral i, Stream s m Char) => Int -> ParsecT s u m i
 _parseNatWidth m
