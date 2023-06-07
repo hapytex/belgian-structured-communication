@@ -14,7 +14,7 @@ module Finance.Belgium.StructuredCommunication
 where
 
 import Control.Applicative ((<|>))
-import Control.Monad (replicateM_, (>=>))
+import Control.Monad ((>=>))
 import Data.Binary (Binary (get, put))
 import Data.Char (digitToInt)
 import Data.Data (Data)
@@ -25,7 +25,7 @@ import Data.Typeable (Typeable)
 import Data.Validity (Validity (validate), check, prettyValidate)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
-import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter, quoteExp))
+import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter, quoteDec, quoteExp, quotePat, quoteType))
 import Language.Haskell.TH.Syntax (Lift (lift))
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
 import Test.QuickCheck.Gen (chooseBoundedIntegral)
@@ -155,4 +155,7 @@ beCommunication :: QuasiQuoter
 beCommunication =
   QuasiQuoter
     { quoteExp = (_liftEither >=> either fail pure . prettyValidate >=> lift) . runParser parseCommunication' () ""
+    , quotePat = const (fail "can not produce a pattern with this QuasiQuoter")
+    , quoteType = const (fail "can not produce a type with this QuasiQuoter")
+    , quoteDec = const (fail "can not produce a declaration with this QuasiQuoter")
     }
