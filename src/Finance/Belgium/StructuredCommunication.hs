@@ -9,12 +9,20 @@ module Finance.Belgium.StructuredCommunication
   ( -- * Constructing 'StructuredCommunication'
     StructuredCommunication,
     structuredCommunication,
+
     -- * determining the checksum
-    checksum, determineChecksum, validChecksum, fixChecksum,
+    checksum,
+    determineChecksum,
+    validChecksum,
+    fixChecksum,
+
     -- * Converting to text
-    communicationToString, communicationToText,
+    communicationToString,
+    communicationToText,
+
     -- * Parsing from text
     parseCommunication,
+
     -- * Quasi quotation
     beCommunication,
   )
@@ -123,9 +131,11 @@ instance Validity StructuredCommunication where
       c = checksum s
 
 -- | Determine the checksum based on the first ten digits. If the 'StructuredCommunication' is not valid, its 'checksum' will /not/ match the result of the 'determineChecksum'.
-determineChecksum
-  :: StructuredCommunication  -- ^ The 'StructuredCommunication' to determine the /checksum/ from.
-  -> Word32  -- ^ The checksum determined by the first ten digits, not per se the /real/ checksum of the 'StructuredCommunication'.
+determineChecksum ::
+  -- | The 'StructuredCommunication' to determine the /checksum/ from.
+  StructuredCommunication ->
+  -- | The checksum determined by the first ten digits, not per se the /real/ checksum of the 'StructuredCommunication'.
+  Word32
 determineChecksum (StructuredCommunication v₀ v₁ v₂)
   | cs₂ == 0 = 97
   | otherwise = cs₂
