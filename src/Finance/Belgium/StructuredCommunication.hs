@@ -169,11 +169,13 @@ _liftEither = either (fail . show) pure
 _toPattern :: StructuredCommunication -> Pat
 #if MIN_VERSION_template_haskell(2, 18, 0)
 _toPattern (StructuredCommunication v0 v1 v2) = ConP 'StructuredCommunication [] [f (fromIntegral v0), f (fromIntegral v1), f (fromIntegral v2)]
-#else
-_toPattern (StructuredCommunication v0 v1 v2) = ConP 'StructuredCommunication [f (fromIntegral v0), f (fromIntegral v1), f (fromIntegral v2)]
-#endif
   where
     f = LitP . IntegerL
+#else
+_toPattern (StructuredCommunication v0 v1 v2) = ConP 'StructuredCommunication [f (fromIntegral v0), f (fromIntegral v1), f (fromIntegral v2)]
+  where
+    f = LitP . IntegerL
+#endif
 
 #if !MIN_VERSION_validity(0,9,0)
 prettyValidate :: Validity a => a -> Either String a
