@@ -106,7 +106,7 @@ jobs:
       uses: hapytex/github-actions/actions/add-cname-to-directory@master
       with:
         folder: "${{ steps.haddock.outputs.haddock-path }}"
-        cname: "tuple-append.django-antipatterns.com"
+        cname: "belgian-structured-communication.django-antipatterns.com"
     - name: deploy the documentation on the GitHub pages
       uses: JamesIves/github-pages-deploy-action@4.0.0
       with:
