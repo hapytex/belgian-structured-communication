@@ -21,7 +21,8 @@ module Finance.Belgium.StructuredCommunication
     communicationToText,
 
     -- * Parsing from text
-    parseCommunication, parseCommunication',
+    parseCommunication,
+    parseCommunication',
 
     -- * Quasi quotation
     beCommunication,
@@ -145,16 +146,20 @@ determineChecksum (StructuredCommunication v₀ v₁ v₂)
     cs₂ = (fromIntegral cs₁ * 30 + v₂ `div` 100) `mod` 97 --  1000 `mod` 97 == 30  (shift three decimal places)
 
 -- | Check if the checksum matches for the given 'StructuredCommunication'.
-validChecksum
-  :: StructuredCommunication  -- ^ The 'StructuredCommunication' for which we check the checksum.
-  -> Bool  -- ^ 'True' if the checksum is valid; 'False' otherwise.
+validChecksum ::
+  -- | The 'StructuredCommunication' for which we check the checksum.
+  StructuredCommunication ->
+  -- | 'True' if the checksum is valid; 'False' otherwise.
+  Bool
 validChecksum s@(StructuredCommunication _ _ v₂) = determineChecksum s == v₂ `mod` 100
 
 -- | Convert the given 'StructuredCommunication' to one where the checksum is valid. If the checksum was already valid, it returns an equivalent
 -- 'StructuredCommunication', this operation is thus /idempotent/.
-fixChecksum
-  :: StructuredCommunication  -- ^ The given 'StructuredCommunication' to fix.
-  -> StructuredCommunication  -- ^ A variant of the given 'StructuredCommunication' where only the last two digits are changed to have a valid checksum.
+fixChecksum ::
+  -- | The given 'StructuredCommunication' to fix.
+  StructuredCommunication ->
+  -- | A variant of the given 'StructuredCommunication' where only the last two digits are changed to have a valid checksum.
+  StructuredCommunication
 fixChecksum s@(StructuredCommunication v0 v1 v₂) = StructuredCommunication v0 v1 (v₂ - (v₂ `mod` 100) + determineChecksum s)
 
 communicationToString :: StructuredCommunication -> String
@@ -186,8 +191,10 @@ _space :: Stream s m Char => ParsecT s u m ()
 _space = skipMany space
 
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also does /not/ (per se) ends with an 'eof'.
-parseCommunication :: Stream s m Char
-                   => ParsecT s u m StructuredCommunication  -- ^ The 'ParsecT' object that parses the structured communication of the form @+++000/0000/00097+++@.
+parseCommunication ::
+  Stream s m Char =>
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000/0000/00097+++@.
+  ParsecT s u m StructuredCommunication
 parseCommunication = do
   c <- _presuf <* _space
   c1 <- _parseNatWidth 3 <* _slash
@@ -196,14 +203,17 @@ parseCommunication = do
   StructuredCommunication c1 c2 c3 <$ _space <* _char3 c
 
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also checks if this is the end of the stream.
-parseCommunication' :: Stream s m Char
-                   => ParsecT s u m StructuredCommunication  -- ^ The 'ParsecT' object that parses the structured communication of the form @+++000/0000/00097+++@.
+parseCommunication' ::
+  Stream s m Char =>
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000/0000/00097+++@.
+  ParsecT s u m StructuredCommunication
 parseCommunication' = parseCommunication <* eof
 
 _liftEither :: Show s => MonadFail m => Either s a -> m a
 _liftEither = either (fail . show) pure
 
 _toPattern :: StructuredCommunication -> Pat
+
 #if MIN_VERSION_template_haskell(2, 18, 0)
 _toPattern (StructuredCommunication v0 v1 v2) = ConP 'StructuredCommunication [] [f (fromIntegral v0), f (fromIntegral v1), f (fromIntegral v2)]
   where
@@ -222,8 +232,9 @@ prettyValidate a = go (validate a)
 #endif
 
 -- | A 'QuasiQuoter' that can parse a string into an expression or pattern. It will thus convert @+++000/000/00097+++@ into a 'StructuredCommunication' as expression or pattern.
-beCommunication
-  :: QuasiQuoter  -- ^ A 'QuasiQuoter' to parse to a 'StructuredCommunication'.
+beCommunication ::
+  -- | A 'QuasiQuoter' to parse to a 'StructuredCommunication'.
+  QuasiQuoter
 beCommunication =
   QuasiQuoter
     { quoteExp = (_liftEither >=> either fail pure . prettyValidate >=> lift) . runParser parseCommunication' () "",
