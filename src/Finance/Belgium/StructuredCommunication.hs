@@ -46,7 +46,7 @@ import Data.Binary (Binary (get, put))
 import Data.Char (digitToInt)
 import Data.Data (Data)
 import Data.Hashable (Hashable)
-import Data.Int(Int64)
+import Data.Int (Int64)
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
 #if MIN_VERSION_validity(0,9,0)
@@ -81,10 +81,10 @@ _fromEnum (StructuredCommunication v₀ v₁ v₂) = fromIntegral v₀ * 1000000
 
 _toEnum :: Int64 -> StructuredCommunication
 _toEnum v = fixChecksum (StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂))
-    where
-      v₂ = (v `mod` 1000) * 100
-      v₁ = (v `div` 1000) `mod` 10000
-      v₀ = v `div` 10000000
+  where
+    v₂ = (v `mod` 1000) * 100
+    v₁ = (v `div` 1000) `mod` 10000
+    v₀ = v `div` 10000000
 
 instance Show StructuredCommunication where
   show c = "[beCommunication|" ++ communicationToString c ++ "|]"
@@ -137,8 +137,8 @@ instance Enum StructuredCommunication where
   enumFromThen v₀ v₁
     | v₀ <= v₁ = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. 9999999999]
     | otherwise = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. 0]
-  enumFromTo v₀ v₁ = map _toEnum [ _fromEnum v₀ .. _fromEnum v₁ ]
-  enumFromThenTo v₀ v₁ v₂ = map _toEnum [ _fromEnum v₀, _fromEnum v₁ .. _fromEnum v₂ ]
+  enumFromTo v₀ v₁ = map _toEnum [_fromEnum v₀ .. _fromEnum v₁]
+  enumFromThenTo v₀ v₁ v₂ = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. _fromEnum v₂]
 
 instance Binary StructuredCommunication where
   get = StructuredCommunication <$> get <*> get <*> get
