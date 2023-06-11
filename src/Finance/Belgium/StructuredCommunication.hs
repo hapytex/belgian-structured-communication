@@ -34,8 +34,10 @@ import Data.Validity (Validation(Validation), Validity (validate), check)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter, quoteDec, quoteExp, quotePat, quoteType))
-#if MIN_VERSION_template_haskell(2, 16, 0)
+#if MIN_VERSION_template_haskell(2, 17, 0)
 import Language.Haskell.TH.Syntax (Code (Code), Exp (AppE, ConE, LitE), Lift (lift, liftTyped), Lit (IntegerL), Pat (ConP, LitP), TExp (TExp))
+#elif MIN_VERSION_template_haskell(2, 16, 0)
+import Language.Haskell.TH.Syntax (Exp (AppE, ConE, LitE), Lift (lift, liftTyped), Lit (IntegerL), Pat (ConP, LitP), TExp (TExp))
 #else
 import Language.Haskell.TH.Syntax (Exp (AppE, ConE, LitE), Lift (lift), Lit (IntegerL), Pat (ConP, LitP))
 #endif
@@ -54,8 +56,12 @@ instance Show StructuredCommunication where
 instance Hashable StructuredCommunication
 
 instance Lift StructuredCommunication where
-#if MIN_VERSION_template_haskell(2, 16, 0)
+#if MIN_VERSION_template_haskell(2, 17, 0)
   liftTyped (StructuredCommunication v0 v1 v2) = Code (pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))))
+    where
+      f = LitE . IntegerL
+#elif MIN_VERSION_template_haskell(2, 16, 0)
+  liftTyped (StructuredCommunication v0 v1 v2) = pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2)))
     where
       f = LitE . IntegerL
 #endif
