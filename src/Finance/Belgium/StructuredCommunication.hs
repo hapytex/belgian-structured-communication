@@ -29,7 +29,7 @@ import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter, quoteDec, quoteExp, quotePat, quoteType))
 #if MIN_VERSION_template_haskell(2, 16, 0)
-import Language.Haskell.TH.Syntax (Code (Code), Exp (AppE, ConE, LitE), Lift (lift, liftTyped), Lit (IntegerL), Pat (ConP, LitP), TExp (TExp))
+import Language.Haskell.TH.Syntax (Exp (AppE, ConE, LitE), Lift (lift, liftTyped), Lit (IntegerL), Pat (ConP, LitP), TExp (TExp))
 #else
 import Language.Haskell.TH.Syntax (Code (Code), Exp (AppE, ConE, LitE), Lift (lift), Lit (IntegerL), Pat (ConP, LitP), TExp (TExp))
 #endif
