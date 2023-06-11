@@ -6,11 +6,16 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
 module Finance.Belgium.StructuredCommunication
-  ( StructuredCommunication,
+  ( -- * Constructing 'StructuredCommunication'
+    StructuredCommunication,
     structuredCommunication,
-    checksum,
-    communicationToText,
+    -- * determining the checksum
+    checksum, determineChecksum, validChecksum, fixChecksum,
+    -- * Converting to text
+    communicationToString, communicationToText,
+    -- * Parsing from text
     parseCommunication,
+    -- * Quasi quotation
     beCommunication,
   )
 where
@@ -58,8 +63,12 @@ instance Show StructuredCommunication where
 
 instance Hashable StructuredCommunication
 
--- | Determining the /checksum/-part for the given 'StructuredCommuncation'. This thus takes the last two digits, or the third number modulo one hundred.
-checksum :: StructuredCommunication -> Word32
+-- | Determining the /checksum/-part for the given 'StructuredCommunication'. This thus takes the last two digits, or the third number modulo one hundred.
+checksum ::
+  -- | The 'StructuredCommunication' for which we determine the checkum.
+  StructuredCommunication ->
+  -- | The last two digits of the 'StructuredCommunication' object. The checksum is *not* per se valid.
+  Word32
 checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
 
 _rcheck :: Integral i => Integer -> i -> Bool
@@ -67,7 +76,17 @@ _rcheck mx = go
   where
     go v = 0 <= i && i <= mx where i = fromIntegral v
 
-structuredCommunication :: (Integral i, Integral j, Integral k) => i -> j -> k -> Maybe StructuredCommunication
+-- | Construct a 'StructuredCommunication' object for the given three integral values that form the three sequences of digits.
+structuredCommunication ::
+  (Integral i, Integral j, Integral k) =>
+  -- | The first number, should be between @000@ and @999@.
+  i ->
+  -- | The second number, should be between @0000@ and @9999@.
+  j ->
+  -- | The third number, shoud be between @00000@ and @99948@.
+  k ->
+  -- | The 'StructuredCommunication' wrapped in a 'Just' of the three numbers are in range, and the checksum matches, otherwise 'Nothing'.
+  Maybe StructuredCommunication
 structuredCommunication v₀ v₁ v₂
   | _rcheck 999 v₀ && _rcheck 9999 v₁ && _rcheck 99948 v₂ && validChecksum s = Just s
   | otherwise = Nothing
@@ -89,8 +108,6 @@ instance Enum StructuredCommunication where
       v₁ = (v `div` 1000) `mod` 10000
       v₀ = v `div` 10000000
 
--- instance Enum StructuredCommunication where
-
 instance Binary StructuredCommunication where
   get = StructuredCommunication <$> get <*> get <*> get
   put (StructuredCommunication v₀ v₁ v₂) = put v₀ >> put v₁ >> put v₂
@@ -101,12 +118,15 @@ instance Validity StructuredCommunication where
       `mappend` check (v₁ <= 9999) "second sequence larger has more than four digits."
       `mappend` check (v₂ <= 99999) "third sequence larger has more than five digits."
       `mappend` check (0 < c && c <= 97) "checksum out of the 1–97 range."
-      `mappend` check (determineCheckSum s == c) "checksum does not match."
+      `mappend` check (determineChecksum s == c) "checksum does not match."
     where
       c = checksum s
 
-determineCheckSum :: StructuredCommunication -> Word32
-determineCheckSum (StructuredCommunication v₀ v₁ v₂)
+-- | Determine the checksum based on the first ten digits. If the 'StructuredCommunication' is not valid, its 'checksum' will /not/ match the result of the 'determineChecksum'.
+determineChecksum
+  :: StructuredCommunication  -- ^ The 'StructuredCommunication' to determine the /checksum/ from.
+  -> Word32  -- ^ The checksum determined by the first ten digits, not per se the /real/ checksum of the 'StructuredCommunication'.
+determineChecksum (StructuredCommunication v₀ v₁ v₂)
   | cs₂ == 0 = 97
   | otherwise = cs₂
   where
@@ -115,10 +135,10 @@ determineCheckSum (StructuredCommunication v₀ v₁ v₂)
     cs₂ = (fromIntegral cs₁ * 30 + v₂ `div` 100) `mod` 97 --  1000 `mod` 97 == 30  (shift three decimal places)
 
 validChecksum :: StructuredCommunication -> Bool
-validChecksum s@(StructuredCommunication _ _ v₂) = determineCheckSum s == v₂ `mod` 100
+validChecksum s@(StructuredCommunication _ _ v₂) = determineChecksum s == v₂ `mod` 100
 
 fixChecksum :: StructuredCommunication -> StructuredCommunication
-fixChecksum s@(StructuredCommunication v0 v1 v₂) = StructuredCommunication v0 v1 (v₂ - (v₂ `mod` 100) + determineCheckSum s)
+fixChecksum s@(StructuredCommunication v0 v1 v₂) = StructuredCommunication v0 v1 (v₂ - (v₂ `mod` 100) + determineChecksum s)
 
 communicationToString :: StructuredCommunication -> String
 communicationToString (StructuredCommunication v₀ v₁ v₂) = "+++" ++ printf "%03d" v₀ ++ "/" ++ printf "%04d" v₁ ++ "/" ++ printf "%05d" v₂ ++ "+++"
