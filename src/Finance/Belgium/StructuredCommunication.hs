@@ -136,7 +136,7 @@ _char3 c = c' <* c' <* c'
     c' = char c
 
 _presuf :: Stream s m Char => ParsecT s u m Char
-_presuf = try (_char3 '+') <|> (_char3 '*')
+_presuf = try (_char3 '+') <|> _char3 '*'
 
 _slash :: Stream s m Char => ParsecT s u m Char
 _slash = _space *> char '/' <* _space
