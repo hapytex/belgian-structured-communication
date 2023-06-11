@@ -46,6 +46,7 @@ import Data.Binary (Binary (get, put))
 import Data.Char (digitToInt)
 import Data.Data (Data)
 import Data.Hashable (Hashable)
+import Data.Int(Int64)
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
 #if MIN_VERSION_validity(0,9,0)
@@ -74,6 +75,16 @@ import Text.Printf (printf)
 -- constructor itself is not accessible, since the `StructuredCommunication` could produce objects that are out of the given ranges, or where the
 -- checksum is not valid. The module thus aims to prevent parsing, changing, etc. 'StructuredCommunication' objects into an invalid state.
 data StructuredCommunication = StructuredCommunication !Word16 !Word16 !Word32 deriving (Data, Eq, Generic, Ord, Read, Typeable)
+
+_fromEnum :: StructuredCommunication -> Int64
+_fromEnum (StructuredCommunication v₀ v₁ v₂) = fromIntegral v₀ * 10000000 + fromIntegral v₁ * 1000 + fromIntegral (v₂ `div` 100)
+
+_toEnum :: Int64 -> StructuredCommunication
+_toEnum v = fixChecksum (StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂))
+    where
+      v₂ = (v `mod` 1000) * 100
+      v₁ = (v `div` 1000) `mod` 10000
+      v₀ = v `div` 10000000
 
 instance Show StructuredCommunication where
   show c = "[beCommunication|" ++ communicationToString c ++ "|]"
@@ -118,12 +129,16 @@ instance Bounded StructuredCommunication where
   maxBound = fixChecksum (StructuredCommunication 999 9999 99900)
 
 instance Enum StructuredCommunication where
-  fromEnum (StructuredCommunication v₀ v₁ v₂) = fromIntegral v₀ * 10000000 + fromIntegral v₁ * 1000 + fromIntegral (v₂ `div` 100)
-  toEnum v = fixChecksum (StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂))
-    where
-      v₂ = (v `mod` 1000) * 100
-      v₁ = (v `div` 1000) `mod` 10000
-      v₀ = v `div` 10000000
+  fromEnum = fromIntegral . _fromEnum
+  toEnum = _toEnum . fromIntegral
+  succ = _toEnum . succ . _fromEnum
+  pred = _toEnum . pred . _fromEnum
+  enumFrom v = map _toEnum [_fromEnum v .. 9999999999]
+  enumFromThen v₀ v₁
+    | v₀ <= v₁ = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. 9999999999]
+    | otherwise = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. 0]
+  enumFromTo v₀ v₁ = map _toEnum [ _fromEnum v₀ .. _fromEnum v₁ ]
+  enumFromThenTo v₀ v₁ v₂ = map _toEnum [ _fromEnum v₀, _fromEnum v₁ .. _fromEnum v₂ ]
 
 instance Binary StructuredCommunication where
   get = StructuredCommunication <$> get <*> get <*> get
