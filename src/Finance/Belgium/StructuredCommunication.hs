@@ -209,7 +209,7 @@ beCommunication =
       quoteDec = const (fail "can not produce a declaration with this QuasiQuoter")
     }
 
-instance Lift StructuredCommunication
+instance Lift StructuredCommunication where
 #if MIN_VERSION_template_haskell(2, 17, 0)
   liftTyped (StructuredCommunication v0 v1 v2) = Code (pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))))
     where
@@ -219,6 +219,6 @@ instance Lift StructuredCommunication
     where
       f = LitE . IntegerL
 #endif
-lift (StructuredCommunication v0 v1 v2) = pure (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))
-  where
-    f = LitE . IntegerL
+  lift (StructuredCommunication v0 v1 v2) = pure (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))
+    where
+      f = LitE . IntegerL
