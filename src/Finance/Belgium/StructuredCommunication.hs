@@ -29,7 +29,7 @@ import GHC.Generics (Generic)
 import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter, quoteDec, quoteExp, quotePat, quoteType))
 import Language.Haskell.TH.Syntax (Code (Code), Exp (AppE, ConE, LitE), Lift (lift, liftTyped), Lit (IntegerL), Pat (ConP, LitP), TExp (TExp))
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
-import Test.QuickCheck.Gen (chooseBoundedIntegral)
+import Test.QuickCheck.Gen (choose)
 import Text.Parsec.Char (char, digit, space)
 import Text.Parsec.Combinator (eof)
 import Text.Parsec.Prim (ParsecT, Stream, runParser, skipMany, try)
@@ -71,7 +71,7 @@ structuredCommunication v₀ v₁ v₂
     s = StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂)
 
 instance Arbitrary StructuredCommunication where
-  arbitrary = fixChecksum <$> (StructuredCommunication <$> chooseBoundedIntegral (0, 999) <*> chooseBoundedIntegral (0, 9999) <*> ((100 *) <$> chooseBoundedIntegral (0, 999)))
+  arbitrary = fixChecksum <$> (StructuredCommunication <$> choose (0, 999) <*> choose (0, 9999) <*> ((100 *) <$> choose (0, 999)))
 
 instance Bounded StructuredCommunication where
   minBound = fixChecksum (StructuredCommunication 0 0 0)
