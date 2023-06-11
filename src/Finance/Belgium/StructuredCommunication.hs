@@ -27,7 +27,7 @@ import Data.Validity (Validity (validate), check, prettyValidate)
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter, quoteDec, quoteExp, quotePat, quoteType))
-import Language.Haskell.TH.Syntax (Code(Code), Exp(AppE, ConE, LitE), Lift (lift, liftTyped), Lit(IntegerL), Pat(ConP, LitP), TExp(TExp))
+import Language.Haskell.TH.Syntax (Code (Code), Exp (AppE, ConE, LitE), Lift (lift, liftTyped), Lit (IntegerL), Pat (ConP, LitP), TExp (TExp))
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
 import Test.QuickCheck.Gen (chooseBoundedIntegral)
 import Text.Parsec.Char (char, digit, space)
@@ -49,9 +49,11 @@ instance Hashable StructuredCommunication
 
 instance Lift StructuredCommunication where
   liftTyped (StructuredCommunication v0 v1 v2) = Code (pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))))
-    where f = LitE . IntegerL
+    where
+      f = LitE . IntegerL
   lift (StructuredCommunication v0 v1 v2) = pure (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))
-    where f = LitE . IntegerL
+    where
+      f = LitE . IntegerL
 
 checksum :: StructuredCommunication -> Word32
 checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
@@ -158,13 +160,14 @@ _liftEither = either (fail . show) pure
 
 _toPattern :: StructuredCommunication -> Pat
 _toPattern (StructuredCommunication v0 v1 v2) = ConP 'StructuredCommunication [] [f (fromIntegral v0), f (fromIntegral v1), f (fromIntegral v2)]
-  where f = LitP . IntegerL
+  where
+    f = LitP . IntegerL
 
 beCommunication :: QuasiQuoter
 beCommunication =
   QuasiQuoter
-    { quoteExp = (_liftEither >=> either fail pure . prettyValidate >=> lift) . runParser parseCommunication' () ""
-    , quotePat = (_liftEither >=> either fail pure . prettyValidate >=> pure . _toPattern) . runParser parseCommunication' () ""
-    , quoteType = const (fail "can not produce a type with this QuasiQuoter")
-    , quoteDec = const (fail "can not produce a declaration with this QuasiQuoter")
+    { quoteExp = (_liftEither >=> either fail pure . prettyValidate >=> lift) . runParser parseCommunication' () "",
+      quotePat = (_liftEither >=> either fail pure . prettyValidate >=> pure . _toPattern) . runParser parseCommunication' () "",
+      quoteType = const (fail "can not produce a type with this QuasiQuoter"),
+      quoteDec = const (fail "can not produce a declaration with this QuasiQuoter")
     }
