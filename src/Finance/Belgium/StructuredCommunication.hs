@@ -160,7 +160,7 @@ fixChecksum ::
   StructuredCommunication ->
   -- | A variant of the given 'StructuredCommunication' where only the last two digits are changed to have a valid checksum.
   StructuredCommunication
-fixChecksum s@(StructuredCommunication v0 v1 v₂) = StructuredCommunication v0 v1 (v₂ - (v₂ `mod` 100) + determineChecksum s)
+fixChecksum s@(StructuredCommunication v₀ v₁ v₂) = StructuredCommunication v₀ v₁ (v₂ - (v₂ `mod` 100) + determineChecksum s)
 
 communicationToString :: StructuredCommunication -> String
 communicationToString (StructuredCommunication v₀ v₁ v₂) = "+++" ++ printf "%03d" v₀ ++ "/" ++ printf "%04d" v₁ ++ "/" ++ printf "%05d" v₂ ++ "+++"
@@ -215,11 +215,11 @@ _liftEither = either (fail . show) pure
 _toPattern :: StructuredCommunication -> Pat
 
 #if MIN_VERSION_template_haskell(2, 18, 0)
-_toPattern (StructuredCommunication v0 v1 v2) = ConP 'StructuredCommunication [] [f (fromIntegral v0), f (fromIntegral v1), f (fromIntegral v2)]
+_toPattern (StructuredCommunication v₀ v₁ v₂) = ConP 'StructuredCommunication [] [f (fromIntegral v₀), f (fromIntegral v₁), f (fromIntegral v₂)]
   where
     f = LitP . IntegerL
 #else
-_toPattern (StructuredCommunication v0 v1 v2) = ConP 'StructuredCommunication [f (fromIntegral v0), f (fromIntegral v1), f (fromIntegral v2)]
+_toPattern (StructuredCommunication v₀ v₁ v₂) = ConP 'StructuredCommunication [f (fromIntegral v₀), f (fromIntegral v₁), f (fromIntegral v₂)]
   where
     f = LitP . IntegerL
 #endif
@@ -245,14 +245,14 @@ beCommunication =
 
 instance Lift StructuredCommunication where
 #if MIN_VERSION_template_haskell(2, 17, 0)
-  liftTyped (StructuredCommunication v0 v1 v2) = Code (pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))))
+  liftTyped (StructuredCommunication v₀ v₁ v₂) = Code (pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v₀) `AppE` f (fromIntegral v₁) `AppE` f (fromIntegral v₂))))
     where
       f = LitE . IntegerL
 #elif MIN_VERSION_template_haskell(2, 16, 0)
-  liftTyped (StructuredCommunication v0 v1 v2) = pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2)))
+  liftTyped (StructuredCommunication v₀ v₁ v₂) = pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v₀) `AppE` f (fromIntegral v₁) `AppE` f (fromIntegral v₂)))
     where
       f = LitE . IntegerL
 #endif
-  lift (StructuredCommunication v0 v1 v2) = pure (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))
+  lift (StructuredCommunication v₀ v₁ v₂) = pure (ConE 'StructuredCommunication `AppE` f (fromIntegral v₀) `AppE` f (fromIntegral v₁) `AppE` f (fromIntegral v₂))
     where
       f = LitE . IntegerL
