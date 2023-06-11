@@ -17,21 +17,27 @@ where
 
 import Control.Applicative ((<|>))
 import Control.Monad ((>=>))
+#if !MIN_VERSION_base(4,13,0)
+import Control.Monad.Fail(MonadFail)
+#endif
 import Data.Binary (Binary (get, put))
 import Data.Char (digitToInt)
 import Data.Data (Data)
 import Data.Hashable (Hashable)
--- import Data.Either(either)
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
+#if MIN_VERSION_validity(0,9,0)
 import Data.Validity (Validity (validate), check, prettyValidate)
+#else
+import Data.Validity (Validation(Validation), Validity (validate), check)
+#endif
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter, quoteDec, quoteExp, quotePat, quoteType))
 #if MIN_VERSION_template_haskell(2, 16, 0)
 import Language.Haskell.TH.Syntax (Code (Code), Exp (AppE, ConE, LitE), Lift (lift, liftTyped), Lit (IntegerL), Pat (ConP, LitP), TExp (TExp))
 #else
-import Language.Haskell.TH.Syntax (Exp (AppE, ConE, LitE), Lift (lift), Lit (IntegerL), Pat (ConP, LitP), TExp (TExp))
+import Language.Haskell.TH.Syntax (Exp (AppE, ConE, LitE), Lift (lift), Lit (IntegerL), Pat (ConP, LitP))
 #endif
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
 import Test.QuickCheck.Gen (choose)
@@ -40,15 +46,10 @@ import Text.Parsec.Combinator (eof)
 import Text.Parsec.Prim (ParsecT, Stream, runParser, skipMany, try)
 import Text.Printf (printf)
 
-data StructuredCommunication = StructuredCommunication
-  { first :: !Word16,
-    second :: !Word16,
-    third :: !Word32
-  }
-  deriving (Data, Eq, Generic, Ord, Read, Typeable)
+data StructuredCommunication = StructuredCommunication !Word16 !Word16 !Word32 deriving (Data, Eq, Generic, Ord, Read, Typeable)
 
 instance Show StructuredCommunication where
-  show c = "[beCommunication|" <> communicationToString c <> "|]"
+  show c = "[beCommunication|" ++ communicationToString c ++ "|]"
 
 instance Hashable StructuredCommunication
 
@@ -101,10 +102,10 @@ instance Binary StructuredCommunication where
 instance Validity StructuredCommunication where
   validate s@(StructuredCommunication v₀ v₁ v₂) =
     check (v₀ <= 999) "first sequence larger has more than three digits."
-      <> check (v₁ <= 9999) "second sequence larger has more than four digits."
-      <> check (v₂ <= 99999) "third sequence larger has more than five digits."
-      <> check (0 < c && c <= 97) "checksum out of the 1–97 range."
-      <> check (determineCheckSum s == c) "checksum does not match."
+      `mappend` check (v₁ <= 9999) "second sequence larger has more than four digits."
+      `mappend` check (v₂ <= 99999) "third sequence larger has more than five digits."
+      `mappend` check (0 < c && c <= 97) "checksum out of the 1–97 range."
+      `mappend` check (determineCheckSum s == c) "checksum does not match."
     where
       c = checksum s
 
@@ -121,10 +122,10 @@ validChecksum :: StructuredCommunication -> Bool
 validChecksum s@(StructuredCommunication _ _ v₂) = determineCheckSum s == v₂ `mod` 100
 
 fixChecksum :: StructuredCommunication -> StructuredCommunication
-fixChecksum s@(StructuredCommunication _ _ v₂) = s {third = v₂ - (v₂ `mod` 100) + determineCheckSum s}
+fixChecksum s@(StructuredCommunication v0 v1 v₂) = StructuredCommunication v0 v1 (v₂ - (v₂ `mod` 100) + determineCheckSum s)
 
 communicationToString :: StructuredCommunication -> String
-communicationToString (StructuredCommunication v₀ v₁ v₂) = "+++" <> printf "%03d" v₀ <> "/" <> printf "%04d" v₁ <> "/" <> printf "%05d" v₂ <> "+++"
+communicationToString (StructuredCommunication v₀ v₁ v₂) = "+++" ++ printf "%03d" v₀ ++ "/" ++ printf "%04d" v₁ ++ "/" ++ printf "%05d" v₂ ++ "+++"
 
 communicationToText :: StructuredCommunication -> Text
 communicationToText = pack . communicationToString
@@ -166,9 +167,20 @@ _liftEither :: Show s => MonadFail m => Either s a -> m a
 _liftEither = either (fail . show) pure
 
 _toPattern :: StructuredCommunication -> Pat
+#if MIN_VERSION_template_haskell(2, 18, 0)
 _toPattern (StructuredCommunication v0 v1 v2) = ConP 'StructuredCommunication [] [f (fromIntegral v0), f (fromIntegral v1), f (fromIntegral v2)]
+#else
+_toPattern (StructuredCommunication v0 v1 v2) = ConP 'StructuredCommunication [f (fromIntegral v0), f (fromIntegral v1), f (fromIntegral v2)]
+#endif
   where
     f = LitP . IntegerL
+
+#if !MIN_VERSION_validity(0,9,0)
+prettyValidate :: Validity a => a -> Either String a
+prettyValidate a = go (validate a)
+  where go (Validation []) = Right a
+        go v = Left (show v)
+#endif
 
 beCommunication :: QuasiQuoter
 beCommunication =
