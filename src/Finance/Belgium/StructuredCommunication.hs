@@ -5,6 +5,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- |
+-- Module      : Finance.Belgium.StructuredCommunication
+-- Description : A module to parse, render and manipulate Belgian structured communication for financial transactions.
+-- Maintainer  : hapytexeu+gh@gmail.com
+-- Stability   : experimental
+-- Portability : POSIX
+--
+-- Belgian companies often make use of /structured communication/ with a checksum. This package aims to provide a toolkit to parse, render and manipulate 'StructuredCommunication'.
 module Finance.Belgium.StructuredCommunication
   ( -- * Constructing 'StructuredCommunication'
     StructuredCommunication,
@@ -162,10 +170,20 @@ fixChecksum ::
   StructuredCommunication
 fixChecksum s@(StructuredCommunication v₀ v₁ v₂) = StructuredCommunication v₀ v₁ (v₂ - (v₂ `mod` 100) + determineChecksum s)
 
-communicationToString :: StructuredCommunication -> String
+-- | Convert the given 'StructuredCommunication' to a 'String' that looks like a structured communcation, so @+++000/0000/00097+++@.
+communicationToString ::
+  -- | The given 'StructuredCommunication' to convert to a 'String'.
+  StructuredCommunication ->
+  -- | The corresponding 'String', of the form @+++000/0000/00097+++@.
+  String
 communicationToString (StructuredCommunication v₀ v₁ v₂) = "+++" ++ printf "%03d" v₀ ++ "/" ++ printf "%04d" v₁ ++ "/" ++ printf "%05d" v₂ ++ "+++"
 
-communicationToText :: StructuredCommunication -> Text
+-- | Convert the given 'StructuredCommunication' to a 'Text' that looks like a structured communcation, so @+++000/0000/00097+++@.
+communicationToText ::
+  -- | The given 'StructuredCommunication' to convert to a 'Text'.
+  StructuredCommunication ->
+  -- | The corresponding 'Text', of the form @+++000/0000/00097+++@.
+  Text
 communicationToText = pack . communicationToString
 
 _parseNatWidth :: (Integral i, Stream s m Char) => Int -> ParsecT s u m i
