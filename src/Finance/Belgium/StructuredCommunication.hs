@@ -48,6 +48,9 @@ import Text.Parsec.Combinator (eof)
 import Text.Parsec.Prim (ParsecT, Stream, runParser, skipMany, try)
 import Text.Printf (printf)
 
+-- | A data type that stores three numbers: one with three digits (@000–999@), four digits (@0000–9999@) and five digits (@00000–99948@). The data
+-- constructor itself is not accessible, since the `StructuredCommunication` could produce objects that are out of the given ranges, or where the
+-- checksum is not valid. The module thus aims to prevent parsing, changing, etc. 'StructuredCommunication' objects into an invalid state.
 data StructuredCommunication = StructuredCommunication !Word16 !Word16 !Word32 deriving (Data, Eq, Generic, Ord, Read, Typeable)
 
 instance Show StructuredCommunication where
@@ -55,20 +58,7 @@ instance Show StructuredCommunication where
 
 instance Hashable StructuredCommunication
 
-instance Lift StructuredCommunication where
-#if MIN_VERSION_template_haskell(2, 17, 0)
-  liftTyped (StructuredCommunication v0 v1 v2) = Code (pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))))
-    where
-      f = LitE . IntegerL
-#elif MIN_VERSION_template_haskell(2, 16, 0)
-  liftTyped (StructuredCommunication v0 v1 v2) = pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2)))
-    where
-      f = LitE . IntegerL
-#endif
-  lift (StructuredCommunication v0 v1 v2) = pure (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))
-    where
-      f = LitE . IntegerL
-
+-- | Determining the /checksum/-part for the given 'StructuredCommuncation'. This thus takes the last two digits, or the third number modulo one hundred.
 checksum :: StructuredCommunication -> Word32
 checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
 
@@ -142,7 +132,7 @@ _parseNatWidth m
   | otherwise = fail "negative number of digits"
   where
     go 0 v = pure v
-    go n v = digit >>= go (n -1) . ((10 * v) +) . fromIntegral . digitToInt
+    go n v = digit >>= go (n - 1) . ((10 * v) +) . fromIntegral . digitToInt
 
 _char3 :: Stream s m Char => Char -> ParsecT s u m Char
 _char3 c = c' <* c' <* c'
@@ -198,3 +188,17 @@ beCommunication =
       quoteType = const (fail "can not produce a type with this QuasiQuoter"),
       quoteDec = const (fail "can not produce a declaration with this QuasiQuoter")
     }
+
+instance Lift StructuredCommunication
+#if MIN_VERSION_template_haskell(2, 17, 0)
+  liftTyped (StructuredCommunication v0 v1 v2) = Code (pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))))
+    where
+      f = LitE . IntegerL
+#elif MIN_VERSION_template_haskell(2, 16, 0)
+  liftTyped (StructuredCommunication v0 v1 v2) = pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2)))
+    where
+      f = LitE . IntegerL
+#endif
+lift (StructuredCommunication v0 v1 v2) = pure (ConE 'StructuredCommunication `AppE` f (fromIntegral v0) `AppE` f (fromIntegral v1) `AppE` f (fromIntegral v2))
+  where
+    f = LitE . IntegerL
