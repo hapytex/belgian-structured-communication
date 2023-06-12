@@ -95,7 +95,7 @@ instance Hashable StructuredCommunication
 checksum ::
   -- | The 'StructuredCommunication' for which we determine the checkum.
   StructuredCommunication ->
-  -- | The last two digits of the 'StructuredCommunication' object. The checksum is *not* per se valid.
+  -- | The last two digits of the 'StructuredCommunication' object. The checksum is /not/ per se valid.
   Word32
 checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
 
@@ -185,19 +185,19 @@ fixChecksum ::
   StructuredCommunication
 fixChecksum s@(StructuredCommunication v₀ v₁ v₂) = StructuredCommunication v₀ v₁ (v₂ - (v₂ `mod` 100) + determineChecksum s)
 
--- | Convert the given 'StructuredCommunication' to a 'String' that looks like a structured communcation, so @+++000/0000/00097+++@.
+-- | Convert the given 'StructuredCommunication' to a 'String' that looks like a structured communcation, so @+++000\/0000\/00097+++@.
 communicationToString ::
   -- | The given 'StructuredCommunication' to convert to a 'String'.
   StructuredCommunication ->
-  -- | The corresponding 'String', of the form @+++000/0000/00097+++@.
+  -- | The corresponding 'String', of the form @+++000\/0000\/00097+++@.
   String
 communicationToString (StructuredCommunication v₀ v₁ v₂) = "+++" ++ printf "%03d" v₀ ++ "/" ++ printf "%04d" v₁ ++ "/" ++ printf "%05d" v₂ ++ "+++"
 
--- | Convert the given 'StructuredCommunication' to a 'Text' that looks like a structured communcation, so @+++000/0000/00097+++@.
+-- | Convert the given 'StructuredCommunication' to a 'Text' that looks like a structured communcation, so @+++000\/0000\/00097+++@.
 communicationToText ::
   -- | The given 'StructuredCommunication' to convert to a 'Text'.
   StructuredCommunication ->
-  -- | The corresponding 'Text', of the form @+++000/0000/00097+++@.
+  -- | The corresponding 'Text', of the form @+++000\/0000\/00097+++@.
   Text
 communicationToText = pack . communicationToString
 
@@ -226,7 +226,7 @@ _space = skipMany space
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also does /not/ (per se) ends with an 'eof'.
 parseCommunication ::
   Stream s m Char =>
-  -- | The 'ParsecT' object that parses the structured communication of the form @+++000/0000/00097+++@.
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
 parseCommunication = do
   c <- _presuf <* _space
@@ -238,7 +238,7 @@ parseCommunication = do
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also checks if this is the end of the stream.
 parseCommunication' ::
   Stream s m Char =>
-  -- | The 'ParsecT' object that parses the structured communication of the form @+++000/0000/00097+++@.
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
 parseCommunication' = parseCommunication <* eof
 
@@ -264,7 +264,7 @@ prettyValidate a = go (validate a)
         go v = Left (show v)
 #endif
 
--- | A 'QuasiQuoter' that can parse a string into an expression or pattern. It will thus convert @+++000/000/00097+++@ into a 'StructuredCommunication' as expression or pattern.
+-- | A 'QuasiQuoter' that can parse a string into an expression or pattern. It will thus convert @+++000\/000\/00097+++@ into a 'StructuredCommunication' as expression or pattern.
 beCommunication ::
   -- | A 'QuasiQuoter' to parse to a 'StructuredCommunication'.
   QuasiQuoter
