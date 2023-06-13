@@ -7,7 +7,7 @@ Belgium introduced a system of structured communication for bank transfers (Dutc
 
 # Package overview
 
-This package provides a data type `StructuredCommunication` to parse, validate, manipulate and render structured communication.
+This package provides a data type `StructuredCommunication` to parse, validate, manipulate and render structured communication. The package aims to prevent constructing 
 
 ## Checksum
 

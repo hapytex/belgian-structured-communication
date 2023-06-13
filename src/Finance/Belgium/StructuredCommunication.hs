@@ -71,7 +71,7 @@ import Text.Parsec.Combinator (eof)
 import Text.Parsec.Prim (ParsecT, Stream, runParser, skipMany, try)
 import Text.Printf (printf)
 
--- | A data type that stores three numbers: one with three digits (@000–999@), four digits (@0000–9999@) and five digits (@00000–99948@). The data
+-- | A data type that stores three numbers: one with three digits (@000–999@), four digits (@0000–9999@) and five digits (@00001–99997@). The data
 -- constructor itself is not accessible, since the `StructuredCommunication` could produce objects that are out of the given ranges, or where the
 -- checksum is not valid. The module thus aims to prevent parsing, changing, etc. 'StructuredCommunication' objects into an invalid state.
 data StructuredCommunication = StructuredCommunication !Word16 !Word16 !Word32 deriving (Data, Eq, Generic, Ord, Read, Typeable)
@@ -111,12 +111,12 @@ structuredCommunication ::
   i ->
   -- | The second number, should be between @0000@ and @9999@.
   j ->
-  -- | The third number, shoud be between @00000@ and @99948@.
+  -- | The third number, should be between @00001@ and @99997@.
   k ->
   -- | The 'StructuredCommunication' wrapped in a 'Just' of the three numbers are in range, and the checksum matches, otherwise 'Nothing'.
   Maybe StructuredCommunication
 structuredCommunication v₀ v₁ v₂
-  | _rcheck 999 v₀ && _rcheck 9999 v₁ && _rcheck 99948 v₂ && validChecksum s = Just s
+  | _rcheck 999 v₀ && _rcheck 9999 v₁ && _rcheck 99997 v₂ && validChecksum s = Just s
   | otherwise = Nothing
   where
     s = StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂)
