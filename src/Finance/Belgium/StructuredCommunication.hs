@@ -76,6 +76,12 @@ import Text.Printf (printf)
 -- checksum is not valid. The module thus aims to prevent parsing, changing, etc. 'StructuredCommunication' objects into an invalid state.
 data StructuredCommunication = StructuredCommunication !Word16 !Word16 !Word32 deriving (Data, Eq, Generic, Ord, Read, Typeable)
 
+_maxVal :: Integral a => a
+_maxVal = 9999999999
+
+_numVals :: Integral a => a
+_numVals = 10000000000
+
 _fromEnum :: StructuredCommunication -> Int64
 _fromEnum (StructuredCommunication v₀ v₁ v₂) = fromIntegral v₀ * 10000000 + fromIntegral v₁ * 1000 + fromIntegral (v₂ `div` 100)
 
@@ -85,6 +91,35 @@ _toEnum v = fixChecksum (StructuredCommunication (fromIntegral v₀) (fromIntegr
     v₂ = (v `mod` 1000) * 100
     v₁ = (v `div` 1000) `mod` 10000
     v₀ = v `div` 10000000
+
+instance Num StructuredCommunication where
+  fromInteger = _toEnum . fromInteger . (`mod` _numVals)
+  v1 + v2 = _toEnum ((_fromEnum v1 + _fromEnum v2) `mod` _numVals)
+  v1 - v2 = _toEnum ((_fromEnum v1 - _fromEnum v2) `mod` _numVals)
+  negate = _toEnum . (`mod` _numVals) . _fromEnum
+  abs = id
+  signum 0 = 0
+  signum _ = 1
+  v1' * v2' = _toEnum ((m1 * v2 + (v1-m1) * m2) `mod` _numVals)
+    where v1 = _fromEnum v1'
+          v2 = _fromEnum v2'
+          m1 = v1 `mod` 100000
+          m2 = v2 `mod` 100000
+
+_both :: (a -> b) -> (a, a) -> (b, b)
+_both f ~(x, y) = (f x, f y)
+
+instance Real StructuredCommunication where
+  toRational = toRational . toInteger
+
+instance Integral StructuredCommunication where
+  toInteger = toInteger . _fromEnum
+  quot x = _toEnum . quot (_fromEnum x) . _fromEnum
+  rem x = _toEnum . rem (_fromEnum x) . _fromEnum
+  quotRem x = _both _toEnum . quotRem (_fromEnum x) . _fromEnum
+  div x = _toEnum . div (_fromEnum x) . _fromEnum
+  mod x = _toEnum . mod (_fromEnum x) . _fromEnum
+  divMod x = _both _toEnum . quotRem (_fromEnum x) . _fromEnum
 
 instance Show StructuredCommunication where
   show c = "[beCommunication|" ++ communicationToString c ++ "|]"
@@ -133,9 +168,9 @@ instance Enum StructuredCommunication where
   toEnum = _toEnum . fromIntegral
   succ = _toEnum . succ . _fromEnum
   pred = _toEnum . pred . _fromEnum
-  enumFrom v = map _toEnum [_fromEnum v .. 9999999999]
+  enumFrom v = map _toEnum [_fromEnum v .. _maxVal]
   enumFromThen v₀ v₁
-    | v₀ <= v₁ = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. 9999999999]
+    | v₀ <= v₁ = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. _maxVal]
     | otherwise = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. 0]
   enumFromTo v₀ v₁ = map _toEnum [_fromEnum v₀ .. _fromEnum v₁]
   enumFromThenTo v₀ v₁ v₂ = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. _fromEnum v₂]

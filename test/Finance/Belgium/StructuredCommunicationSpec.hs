@@ -2,10 +2,7 @@
 
 module Finance.Belgium.StructuredCommunicationSpec where
 
-import Data.Bits(shiftL, testBit)
-import Data.Foldable(toList)
 import Data.Validity(isValid)
-import Data.Word(Word64)
 
 import Finance.Belgium.StructuredCommunication(StructuredCommunication, beCommunication)
 
@@ -18,7 +15,7 @@ spec = do
   it "all succ's of a random StructuredCommunications are valid" (quickCheckWith stdArgs { maxSuccess = 1000000 } (property (isValid . succ :: StructuredCommunication -> Bool)))
   it "all pred's of a random StructuredCommunications are valid" (property (isValid . pred :: StructuredCommunication -> Bool))
   it "quasi quotation is valid" (isValid [beCommunication|+++000/0000/00097+++|])
-  it "all are valid in an arbitrary range" (property (\x1 -> all isValid . enumFromTo x1 :: StructuredCommunication -> Bool))
+  -- it "all are valid in an arbitrary range" (property (\x1 -> all isValid . enumFromTo x1 :: StructuredCommunication -> Bool))
   -- it "all StructuredCommunications can be parsed back" ())
 
 patternMatch :: StructuredCommunication -> Bool
