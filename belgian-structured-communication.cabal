@@ -36,6 +36,30 @@ library
                        -Wmissing-home-modules
                        -Wredundant-constraints
 
+test-suite             belgian-structured-test
+  type:                exitcode-stdio-1.0
+  main-is:             Main.hs
+  hs-source-dirs:      test
+  other-modules:
+      Finance.Belgium.StructuredCommunicationSpec
+  build-depends:
+      base
+    , belgian-structured-communication
+    , hspec ==2.*
+    , QuickCheck >=2.1
+    , validity >= 0.4.0.0
+  build-tool-depends:
+      hspec-discover:hspec-discover == 2.*
+  default-language:    Haskell2010
+  default-extensions:
+      BlockArguments
+    , OverloadedStrings
+  ghc-options:       -Wall -Wcompat -Wcompat
+                     -Wincomplete-record-updates
+                     -Wincomplete-uni-patterns
+                     -Wredundant-constraints
+
+
 source-repository head
   type:     git
   location: https://github.com/hapytex/belgian-structured-communication
