@@ -100,11 +100,12 @@ instance Num StructuredCommunication where
   abs = id
   signum 0 = 0
   signum _ = 1
-  v1' * v2' = _toEnum ((m1 * v2 + (v1-m1) * m2) `mod` _numVals)
-    where v1 = _fromEnum v1'
-          v2 = _fromEnum v2'
-          m1 = v1 `mod` 100000
-          m2 = v2 `mod` 100000
+  v1' * v2' = _toEnum ((m1 * v2 + (v1 - m1) * m2) `mod` _numVals)
+    where
+      v1 = _fromEnum v1'
+      v2 = _fromEnum v2'
+      m1 = v1 `mod` 100000
+      m2 = v2 `mod` 100000
 
 _both :: (a -> b) -> (a, a) -> (b, b)
 _both f ~(x, y) = (f x, f y)
@@ -315,6 +316,7 @@ instance Lift StructuredCommunication where
   lift (StructuredCommunication v₀ v₁ v₂) = pure (ConE 'StructuredCommunication `AppE` f (fromIntegral v₀) `AppE` f (fromIntegral v₁) `AppE` f (fromIntegral v₂))
     where
       f = LitE . IntegerL
+
 #if MIN_VERSION_template_haskell(2, 17, 0)
   liftTyped (StructuredCommunication v₀ v₁ v₂) = Code (pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v₀) `AppE` f (fromIntegral v₁) `AppE` f (fromIntegral v₂))))
     where
