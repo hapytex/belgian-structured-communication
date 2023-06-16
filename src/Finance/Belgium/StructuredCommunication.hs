@@ -96,7 +96,7 @@ instance Num StructuredCommunication where
   fromInteger = _toEnum . fromInteger . (`mod` _numVals)
   v1 + v2 = _toEnum ((_fromEnum v1 + _fromEnum v2) `mod` _numVals)
   v1 - v2 = _toEnum ((_fromEnum v1 - _fromEnum v2) `mod` _numVals)
-  negate = _toEnum . (`mod` _numVals) . _fromEnum
+  negate = _toEnum . (`mod` _numVals) . negate . _fromEnum
   abs = id
   signum 0 = 0
   signum _ = 1
