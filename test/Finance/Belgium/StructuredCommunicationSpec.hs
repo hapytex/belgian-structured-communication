@@ -45,4 +45,6 @@ spec = do
 patternMatch :: StructuredCommunication -> Bool
 -- patternMatch [beCommunication|+++999/9999/99901+++|] = True -- raises a compile error, expected behavior
 patternMatch [beCommunication|+++999/9999/99948+++|] = True
+patternMatch [beCommunication|*** 000 / 0000 / 00101 ***|] = True
+-- patternMatch [beCommunication|*** 000 / 0000 / 00101 +++|] = True  -- raises a compile error, expected behavior
 patternMatch _ = False
