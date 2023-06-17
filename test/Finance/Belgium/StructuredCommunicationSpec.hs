@@ -14,9 +14,12 @@ _testEq f g x' = fromInteger (f x) == g (fromInteger x)
   where x = abs x'
 
 _testEq2 :: (Integer -> Integer -> Integer) -> (StructuredCommunication -> StructuredCommunication -> StructuredCommunication) -> Integer -> Integer -> Bool
-_testEq2 f g x' y' = fromInteger (f x y) == g (fromInteger x) (fromInteger y)
+_testEq2 f g x' y' = fromInteger (f y x) == g (fromInteger y) (fromInteger x)
   where x = abs x'
         y = abs y'
+
+_testEq2Inc :: (Integer -> Integer -> Integer) -> (StructuredCommunication -> StructuredCommunication -> StructuredCommunication) -> Integer -> Integer -> Bool
+_testEq2Inc f g = _testEq2 f g . (1+) . abs
 
 spec :: Spec
 spec = do
@@ -30,10 +33,10 @@ spec = do
   it "(+)" (property (_testEq2 (+) (+)))
   it "(-)" (property (_testEq2 (-) (-)))
   it "(*)" (property (_testEq2 (*) (*)))
-  -- it "quot" (property (_testEq2 quot quot))
-  -- it "rem" (property (_testEq2 rem rem))
-  -- it "div" (property (_testEq2 div div))
-  -- it "mod" (property (_testEq2 mod mod))
+  it "quot" (property (_testEq2Inc quot quot))
+  it "rem" (property (_testEq2Inc rem rem))
+  it "div" (property (_testEq2Inc div div))
+  it "mod" (property (_testEq2Inc mod mod))
   -- it "all are valid in an arbitrary range" (property (\x1 -> all isValid . enumFromTo x1 :: StructuredCommunication -> Bool))
   -- it "all StructuredCommunications can be parsed back" ())
 
