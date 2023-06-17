@@ -46,6 +46,7 @@ test-suite             belgian-structured-test
       base
     , belgian-structured-communication
     , hspec ==2.*
+    , parsec >=3.0
     , QuickCheck >=2.1
     , validity >= 0.4.0.0
   build-tool-depends:

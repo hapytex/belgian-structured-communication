@@ -31,6 +31,8 @@ module Finance.Belgium.StructuredCommunication
     -- * Parsing from text
     parseCommunication,
     parseCommunication',
+    parseCommunicationE,
+    parseCommunicationE',
 
     -- * Quasi quotation
     beCommunication,
@@ -260,23 +262,37 @@ _space :: Stream s m Char => ParsecT s u m ()
 _space = skipMany space
 
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also does /not/ (per se) ends with an 'eof'.
-parseCommunication ::
+parseCommunication' ::
   Stream s m Char =>
   -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
-parseCommunication = do
+parseCommunication' = do
   c <- _presuf <* _space
   c1 <- _parseNatWidth 3 <* _slash
   c2 <- _parseNatWidth 4 <* _slash
   c3 <- _parseNatWidth 5
   StructuredCommunication c1 c2 c3 <$ _space <* _char3 c
 
--- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also checks if this is the end of the stream.
-parseCommunication' ::
+-- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' is checked for its validity (checksum). The parser does /not/ (per se) ends with an 'eof'.
+parseCommunication ::
   Stream s m Char =>
   -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
-parseCommunication' = parseCommunication <* eof
+parseCommunication = parseCommunication' >>= _liftEither . prettyValidate
+
+-- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also checks if this is the end of the stream.
+parseCommunicationE' ::
+  Stream s m Char =>
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
+  ParsecT s u m StructuredCommunication
+parseCommunicationE' = parseCommunication <* eof
+
+-- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' is checked for its validity (checksum). The parser also checks that this is the end of the stream.
+parseCommunicationE ::
+  Stream s m Char =>
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
+  ParsecT s u m StructuredCommunication
+parseCommunicationE = parseCommunicationE' >>= _liftEither . prettyValidate
 
 _liftEither :: Show s => MonadFail m => Either s a -> m a
 _liftEither = either (fail . show) pure
@@ -306,8 +322,8 @@ beCommunication ::
   QuasiQuoter
 beCommunication =
   QuasiQuoter
-    { quoteExp = (_liftEither >=> either fail pure . prettyValidate >=> lift) . runParser parseCommunication' () "",
-      quotePat = (_liftEither >=> either fail pure . prettyValidate >=> pure . _toPattern) . runParser parseCommunication' () "",
+    { quoteExp = (_liftEither >=> lift) . runParser parseCommunicationE () "",
+      quotePat = (_liftEither >=> pure . _toPattern) . runParser parseCommunicationE () "",
       quoteType = const (fail "can not produce a type with this QuasiQuoter"),
       quoteDec = const (fail "can not produce a declaration with this QuasiQuoter")
     }

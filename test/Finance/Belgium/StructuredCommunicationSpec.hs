@@ -4,10 +4,12 @@ module Finance.Belgium.StructuredCommunicationSpec where
 
 import Data.Validity(isValid)
 
-import Finance.Belgium.StructuredCommunication(StructuredCommunication, beCommunication)
+import Finance.Belgium.StructuredCommunication(StructuredCommunication, beCommunication, communicationToString, parseCommunication')
 
 import Test.Hspec(Spec, it)
 import Test.QuickCheck(maxSuccess, property, quickCheckWith, stdArgs)
+
+import Text.Parsec.Prim (runParser)
 
 _testEq :: (Integer -> Integer) -> (StructuredCommunication -> StructuredCommunication) -> Integer -> Bool
 _testEq f g x' = fromInteger (f x) == g (fromInteger x)
@@ -38,8 +40,9 @@ spec = do
   it "div" (property (_testEq2Inc div div))
   it "mod" (property (_testEq2Inc mod mod))
   -- it "all are valid in an arbitrary range" (property (\x1 -> all isValid . enumFromTo x1 :: StructuredCommunication -> Bool))
-  -- it "all StructuredCommunications can be parsed back" ())
+  it "all StructuredCommunications can be parsed back" (property (\x -> runParser parseCommunication' () "" (communicationToString x) == Right x))
 
 patternMatch :: StructuredCommunication -> Bool
+-- patternMatch [beCommunication|+++999/9999/99901+++|] = True -- raises a compile error, expected behavior
 patternMatch [beCommunication|+++999/9999/99948+++|] = True
 patternMatch _ = False
