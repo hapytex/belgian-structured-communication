@@ -7,7 +7,21 @@ Belgium introduced a system of structured communication for bank transfers (Dutc
 
 # Package overview
 
-This package provides a data type `StructuredCommunication` to parse, validate, manipulate and render structured communication. The package aims to prevent constructing 
+This package provides a data type `StructuredCommunication` to parse, validate, manipulate and render structured communication. The package aims to prevent constructing invalid structured communication, although it is not impossible when parsing, such that one can later fix the checksum of the parsed communication, or check its validity.
+
+## `StructuredCommunication`
+
+The main aspect of the package is the `StructuredCommunication` which encapsulates two `Word16`s and one `Word32` for the three components of the structured communication. It might however be advisable *not* to use the data constructor, since it can construct `StructuredCommunication` that is simply invalid. It is better to use the `structuredCommunication` which only constructs a `StructuredCommunication` wrapped in a `Just` data constructor, if the given `Integral` parameters are out of range, or the checksum does not match. This is thus more safe.
+
+`StructuredCommunication` is an instance of `Show`, but does *not* render it in the given format, it renders it as how you can use it as a quasiquoter, so - as is often done in Haskell - to use it in code.
+
+One can use `communicationToString :: StructuredCommunication -> String` and `communicationToText :: StructuredCommunication -> Text` to convert it to a `String` or a `Text` which uses three plusses, followed by the three segments separated by a slash and three additional plusses.
+
+One can also parse a `StructuredCommunication` with four parsers: `communicationParser`, `communicationParser'` `communicationEParser`, and `communicationEParser'`. The parsers without a prime perform also validation that the checksum matches. The parsers with an `E` also require that the stream ends. For each parser, there is also a conter-part function such as `parseCommuncation`, `parseCommuncation'`, `parseCommuncationE`, and `parseCommuncationE'` which runs the parser with a stream. These functions either return the `StructuredCommunication` or a `ParseError`.
+
+## Quasiquoter
+
+The package also has a `QuasiQuoter` `beCommuncation` that can be parsed to an expression or a pattern. This thus can be used to use structured communication for example to render it somewhere (on an invoice for example), but also to do pattern matching in a function to check if a certain `StructuredCommunication` matches.
 
 ## Checksum
 
@@ -17,6 +31,6 @@ The algorithm of the checksum sees the first ten digits as a whole number and de
 
 Belgian bank account numbers also have twelve digits, except that one does not write slashes and plusses or asterisks, but the same checksum algorithm is used. The digits are grouped in three groups of four digits. Therefore the lowest Belgian banking account number is `0000 0000 0097`. In order to convert this to an International Bank Account Number (IBAN), a prefix `BE` is added and two extra checksum digits. The IBAN variant of the lowest Belgian account number is thus `BE54 0000 0000 0097`.
 
-Belgian VAT numbers use ten numbers, often defined in one group of four digits, and two groups of three digits. For transactions related this VAT number, one often adds the checksum to the VAT number to turn it into a structured communication. If the VAT number is thus `0000.000.000`, then the structured communcation to pay VAT in advance to the federal government is `+++000/0000/00097+++`. Beware that this is *not* the case for *all* banking transfers regarding the (VAT of) a company.
+Belgian VAT numbers use ten numbers, often defined in one group of four digits, and two groups of three digits. For transactions related this VAT number, one often adds the checksum to the VAT number to turn it into a structured communication. If the VAT number is thus `0000.000.000`, then the structured communication to pay VAT in advance to the federal government is `+++000/0000/00097+++`. Beware that this is *not* the case for *all* banking transfers regarding the (VAT of) a company.
 
 Some portals, like *Bolero* for example also use the client number as prefix, and then add the checksum to construct structured messages for bank transfers to the corresponding account(s).
