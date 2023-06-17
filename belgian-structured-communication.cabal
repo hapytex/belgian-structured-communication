@@ -1,7 +1,11 @@
 name:                belgian-structured-communication
 version:             0.1.0.0
--- synopsis:
--- description:
+synopsis:  parsing, rendering and manipulating the structured communication of Belgian financial transactions.
+description:
+  A package that exports a 'StructuredCommunication' data type that can render and manipulate structured
+  communcation.
+
+  The package also has some parsers to parse structured communcation, and a quasi quoter to define these at compile time.
 homepage:            https://github.com/hapytex/belgian-structured-communication#readme
 license:             BSD3
 license-file:        LICENSE
