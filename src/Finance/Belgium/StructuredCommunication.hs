@@ -15,7 +15,7 @@
 -- Belgian companies often make use of /structured communication/ with a checksum. This package aims to provide a toolkit to parse, render and manipulate 'StructuredCommunication'.
 module Finance.Belgium.StructuredCommunication
   ( -- * Constructing 'StructuredCommunication'
-    StructuredCommunication,
+    StructuredCommunication (StructuredCommunication),
     structuredCommunication,
 
     -- * determining the checksum
@@ -29,8 +29,14 @@ module Finance.Belgium.StructuredCommunication
     communicationToText,
 
     -- * Parsing from text
+    communicationParser,
+    communicationParser',
+    communicationEParser,
+    communicationEParser',
     parseCommunication,
     parseCommunication',
+    parseCommunicationE,
+    parseCommunicationE',
 
     -- * Quasi quotation
     beCommunication,
@@ -45,6 +51,7 @@ import Control.Monad.Fail(MonadFail)
 import Data.Binary (Binary (get, put))
 import Data.Char (digitToInt)
 import Data.Data (Data)
+import Data.Functor.Identity (Identity)
 import Data.Hashable (Hashable)
 import Data.Int (Int64)
 import Data.Text (Text, pack)
@@ -66,15 +73,22 @@ import Language.Haskell.TH.Syntax (Exp (AppE, ConE, LitE), Lift (lift), Lit (Int
 #endif
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
 import Test.QuickCheck.Gen (choose)
+import Text.Parsec (ParseError)
 import Text.Parsec.Char (char, digit, space)
 import Text.Parsec.Combinator (eof)
 import Text.Parsec.Prim (ParsecT, Stream, runParser, skipMany, try)
 import Text.Printf (printf)
 
--- | A data type that stores three numbers: one with three digits (@000–999@), four digits (@0000–9999@) and five digits (@00000–99948@). The data
+-- | A data type that stores three numbers: one with three digits (@000–999@), four digits (@0000–9999@) and five digits (@00001–99997@). The data
 -- constructor itself is not accessible, since the `StructuredCommunication` could produce objects that are out of the given ranges, or where the
 -- checksum is not valid. The module thus aims to prevent parsing, changing, etc. 'StructuredCommunication' objects into an invalid state.
 data StructuredCommunication = StructuredCommunication !Word16 !Word16 !Word32 deriving (Data, Eq, Generic, Ord, Read, Typeable)
+
+_maxVal :: Integral a => a
+_maxVal = 9999999999
+
+_numVals :: Integral a => a
+_numVals = 10000000000
 
 _fromEnum :: StructuredCommunication -> Int64
 _fromEnum (StructuredCommunication v₀ v₁ v₂) = fromIntegral v₀ * 10000000 + fromIntegral v₁ * 1000 + fromIntegral (v₂ `div` 100)
@@ -86,6 +100,36 @@ _toEnum v = fixChecksum (StructuredCommunication (fromIntegral v₀) (fromIntegr
     v₁ = (v `div` 1000) `mod` 10000
     v₀ = v `div` 10000000
 
+instance Num StructuredCommunication where
+  fromInteger = _toEnum . fromInteger . (`mod` _numVals)
+  v1 + v2 = _toEnum ((_fromEnum v1 + _fromEnum v2) `mod` _numVals)
+  v1 - v2 = _toEnum ((_fromEnum v1 - _fromEnum v2) `mod` _numVals)
+  negate = _toEnum . (`mod` _numVals) . negate . _fromEnum
+  abs = id
+  signum 0 = 0
+  signum _ = 1
+  v1' * v2' = _toEnum ((m1 * v2 + (v1 - m1) * m2) `mod` _numVals)
+    where
+      v1 = _fromEnum v1'
+      v2 = _fromEnum v2'
+      m1 = v1 `mod` 100000
+      m2 = v2 `mod` 100000
+
+_both :: (a -> b) -> (a, a) -> (b, b)
+_both f ~(x, y) = (f x, f y)
+
+instance Real StructuredCommunication where
+  toRational = toRational . toInteger
+
+instance Integral StructuredCommunication where
+  toInteger = toInteger . _fromEnum
+  quot x = _toEnum . quot (_fromEnum x) . _fromEnum
+  rem x = _toEnum . rem (_fromEnum x) . _fromEnum
+  quotRem x = _both _toEnum . quotRem (_fromEnum x) . _fromEnum
+  div x = _toEnum . div (_fromEnum x) . _fromEnum
+  mod x = _toEnum . mod (_fromEnum x) . _fromEnum
+  divMod x = _both _toEnum . quotRem (_fromEnum x) . _fromEnum
+
 instance Show StructuredCommunication where
   show c = "[beCommunication|" ++ communicationToString c ++ "|]"
 
@@ -95,7 +139,7 @@ instance Hashable StructuredCommunication
 checksum ::
   -- | The 'StructuredCommunication' for which we determine the checkum.
   StructuredCommunication ->
-  -- | The last two digits of the 'StructuredCommunication' object. The checksum is *not* per se valid.
+  -- | The last two digits of the 'StructuredCommunication' object. The checksum is /not/ per se valid.
   Word32
 checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
 
@@ -111,12 +155,12 @@ structuredCommunication ::
   i ->
   -- | The second number, should be between @0000@ and @9999@.
   j ->
-  -- | The third number, shoud be between @00000@ and @99948@.
+  -- | The third number, should be between @00001@ and @99997@.
   k ->
   -- | The 'StructuredCommunication' wrapped in a 'Just' of the three numbers are in range, and the checksum matches, otherwise 'Nothing'.
   Maybe StructuredCommunication
 structuredCommunication v₀ v₁ v₂
-  | _rcheck 999 v₀ && _rcheck 9999 v₁ && _rcheck 99948 v₂ && validChecksum s = Just s
+  | _rcheck 999 v₀ && _rcheck 9999 v₁ && _rcheck 99997 v₂ && validChecksum s = Just s
   | otherwise = Nothing
   where
     s = StructuredCommunication (fromIntegral v₀) (fromIntegral v₁) (fromIntegral v₂)
@@ -133,9 +177,9 @@ instance Enum StructuredCommunication where
   toEnum = _toEnum . fromIntegral
   succ = _toEnum . succ . _fromEnum
   pred = _toEnum . pred . _fromEnum
-  enumFrom v = map _toEnum [_fromEnum v .. 9999999999]
+  enumFrom v = map _toEnum [_fromEnum v .. _maxVal]
   enumFromThen v₀ v₁
-    | v₀ <= v₁ = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. 9999999999]
+    | v₀ <= v₁ = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. _maxVal]
     | otherwise = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. 0]
   enumFromTo v₀ v₁ = map _toEnum [_fromEnum v₀ .. _fromEnum v₁]
   enumFromThenTo v₀ v₁ v₂ = map _toEnum [_fromEnum v₀, _fromEnum v₁ .. _fromEnum v₂]
@@ -185,19 +229,19 @@ fixChecksum ::
   StructuredCommunication
 fixChecksum s@(StructuredCommunication v₀ v₁ v₂) = StructuredCommunication v₀ v₁ (v₂ - (v₂ `mod` 100) + determineChecksum s)
 
--- | Convert the given 'StructuredCommunication' to a 'String' that looks like a structured communcation, so @+++000/0000/00097+++@.
+-- | Convert the given 'StructuredCommunication' to a 'String' that looks like a structured communication, so @+++000\/0000\/00097+++@.
 communicationToString ::
   -- | The given 'StructuredCommunication' to convert to a 'String'.
   StructuredCommunication ->
-  -- | The corresponding 'String', of the form @+++000/0000/00097+++@.
+  -- | The corresponding 'String', of the form @+++000\/0000\/00097+++@.
   String
 communicationToString (StructuredCommunication v₀ v₁ v₂) = "+++" ++ printf "%03d" v₀ ++ "/" ++ printf "%04d" v₁ ++ "/" ++ printf "%05d" v₂ ++ "+++"
 
--- | Convert the given 'StructuredCommunication' to a 'Text' that looks like a structured communcation, so @+++000/0000/00097+++@.
+-- | Convert the given 'StructuredCommunication' to a 'Text' that looks like a structured communication, so @+++000\/0000\/00097+++@.
 communicationToText ::
   -- | The given 'StructuredCommunication' to convert to a 'Text'.
   StructuredCommunication ->
-  -- | The corresponding 'Text', of the form @+++000/0000/00097+++@.
+  -- | The corresponding 'Text', of the form @+++000\/0000\/00097+++@.
   Text
 communicationToText = pack . communicationToString
 
@@ -224,23 +268,73 @@ _space :: Stream s m Char => ParsecT s u m ()
 _space = skipMany space
 
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also does /not/ (per se) ends with an 'eof'.
-parseCommunication ::
+communicationParser' ::
   Stream s m Char =>
-  -- | The 'ParsecT' object that parses the structured communication of the form @+++000/0000/00097+++@.
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
-parseCommunication = do
+communicationParser' = do
   c <- _presuf <* _space
   c1 <- _parseNatWidth 3 <* _slash
   c2 <- _parseNatWidth 4 <* _slash
   c3 <- _parseNatWidth 5
   StructuredCommunication c1 c2 c3 <$ _space <* _char3 c
 
--- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also checks if this is the end of the stream.
-parseCommunication' ::
+-- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' is checked for its validity (checksum). The parser does /not/ (per se) ends with an 'eof'.
+communicationParser ::
   Stream s m Char =>
-  -- | The 'ParsecT' object that parses the structured communication of the form @+++000/0000/00097+++@.
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
-parseCommunication' = parseCommunication <* eof
+communicationParser = communicationParser' >>= _liftEither . prettyValidate
+
+-- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also checks if this is the end of the stream.
+communicationEParser' ::
+  Stream s m Char =>
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
+  ParsecT s u m StructuredCommunication
+communicationEParser' = communicationParser <* eof
+
+-- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' is checked for its validity (checksum). The parser also checks that this is the end of the stream.
+communicationEParser ::
+  Stream s m Char =>
+  -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
+  ParsecT s u m StructuredCommunication
+communicationEParser = communicationEParser' >>= _liftEither . prettyValidate
+
+-- | Parsing a stream into a 'StructuredCommunication' that also validates the checksum of the communication. The stream does not per se needs to end with structured communcation.
+parseCommunication ::
+  Stream s Identity Char =>
+  -- | The stream that is parsed into a 'StructuredCommunication'
+  s ->
+  -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
+  Either ParseError StructuredCommunication
+parseCommunication = runParser communicationParser () ""
+
+-- | Parsing a stream into a 'StructuredCommunication' that does /noet/ validate the checksum of the communication. The stream does not per se needs to end with structured communcation.
+parseCommunication' ::
+  Stream s Identity Char =>
+  -- | The stream that is parsed into a 'StructuredCommunication'
+  s ->
+  -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
+  Either ParseError StructuredCommunication
+parseCommunication' = runParser communicationParser' () ""
+
+-- | Parsing a stream into a 'StructuredCommunication' that also validates the checksum of the communication. After the structured communication, the stream needs to end.
+parseCommunicationE ::
+  Stream s Identity Char =>
+  -- | The stream that is parsed into a 'StructuredCommunication'
+  s ->
+  -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
+  Either ParseError StructuredCommunication
+parseCommunicationE = runParser communicationEParser () ""
+
+-- | Parsing a stream into a 'StructuredCommunication' that does /noet/ validate the checksum of the communication. After the structured communication, the stream needs to end.
+parseCommunicationE' ::
+  Stream s Identity Char =>
+  -- | The stream that is parsed into a 'StructuredCommunication'
+  s ->
+  -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
+  Either ParseError StructuredCommunication
+parseCommunicationE' = runParser communicationEParser' () ""
 
 _liftEither :: Show s => MonadFail m => Either s a -> m a
 _liftEither = either (fail . show) pure
@@ -264,14 +358,14 @@ prettyValidate a = go (validate a)
         go v = Left (show v)
 #endif
 
--- | A 'QuasiQuoter' that can parse a string into an expression or pattern. It will thus convert @+++000/000/00097+++@ into a 'StructuredCommunication' as expression or pattern.
+-- | A 'QuasiQuoter' that can parse a string into an expression or pattern. It will thus convert @+++000\/000\/00097+++@ into a 'StructuredCommunication' as expression or pattern.
 beCommunication ::
   -- | A 'QuasiQuoter' to parse to a 'StructuredCommunication'.
   QuasiQuoter
 beCommunication =
   QuasiQuoter
-    { quoteExp = (_liftEither >=> either fail pure . prettyValidate >=> lift) . runParser parseCommunication' () "",
-      quotePat = (_liftEither >=> either fail pure . prettyValidate >=> pure . _toPattern) . runParser parseCommunication' () "",
+    { quoteExp = (_liftEither >=> lift) . runParser communicationEParser () "",
+      quotePat = (_liftEither >=> pure . _toPattern) . runParser communicationEParser () "",
       quoteType = const (fail "can not produce a type with this QuasiQuoter"),
       quoteDec = const (fail "can not produce a declaration with this QuasiQuoter")
     }
@@ -280,6 +374,7 @@ instance Lift StructuredCommunication where
   lift (StructuredCommunication v₀ v₁ v₂) = pure (ConE 'StructuredCommunication `AppE` f (fromIntegral v₀) `AppE` f (fromIntegral v₁) `AppE` f (fromIntegral v₂))
     where
       f = LitE . IntegerL
+
 #if MIN_VERSION_template_haskell(2, 17, 0)
   liftTyped (StructuredCommunication v₀ v₁ v₂) = Code (pure (TExp (ConE 'StructuredCommunication `AppE` f (fromIntegral v₀) `AppE` f (fromIntegral v₁) `AppE` f (fromIntegral v₂))))
     where
