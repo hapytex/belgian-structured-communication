@@ -15,7 +15,7 @@
 -- Belgian companies often make use of /structured communication/ with a checksum. This package aims to provide a toolkit to parse, render and manipulate 'StructuredCommunication'.
 module Finance.Belgium.StructuredCommunication
   ( -- * Constructing 'StructuredCommunication'
-    StructuredCommunication(StructuredCommunication),
+    StructuredCommunication (StructuredCommunication),
     structuredCommunication,
 
     -- * determining the checksum
@@ -51,7 +51,7 @@ import Control.Monad.Fail(MonadFail)
 import Data.Binary (Binary (get, put))
 import Data.Char (digitToInt)
 import Data.Data (Data)
-import Data.Functor.Identity(Identity)
+import Data.Functor.Identity (Identity)
 import Data.Hashable (Hashable)
 import Data.Int (Int64)
 import Data.Text (Text, pack)
@@ -73,7 +73,7 @@ import Language.Haskell.TH.Syntax (Exp (AppE, ConE, LitE), Lift (lift), Lit (Int
 #endif
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
 import Test.QuickCheck.Gen (choose)
-import Text.Parsec(ParseError)
+import Text.Parsec (ParseError)
 import Text.Parsec.Char (char, digit, space)
 import Text.Parsec.Combinator (eof)
 import Text.Parsec.Prim (ParsecT, Stream, runParser, skipMany, try)
@@ -301,7 +301,8 @@ communicationEParser ::
 communicationEParser = communicationEParser' >>= _liftEither . prettyValidate
 
 -- | Parsing a stream into a 'StructuredCommunication' that also validates the checksum of the communication. The stream does not per se needs to end with structured communcation.
-parseCommunication :: Stream s Identity Char =>
+parseCommunication ::
+  Stream s Identity Char =>
   -- | The stream that is parsed into a 'StructuredCommunication'
   s ->
   -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
@@ -309,7 +310,8 @@ parseCommunication :: Stream s Identity Char =>
 parseCommunication = runParser communicationParser () ""
 
 -- | Parsing a stream into a 'StructuredCommunication' that does /noet/ validate the checksum of the communication. The stream does not per se needs to end with structured communcation.
-parseCommunication' :: Stream s Identity Char =>
+parseCommunication' ::
+  Stream s Identity Char =>
   -- | The stream that is parsed into a 'StructuredCommunication'
   s ->
   -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
@@ -317,7 +319,8 @@ parseCommunication' :: Stream s Identity Char =>
 parseCommunication' = runParser communicationParser' () ""
 
 -- | Parsing a stream into a 'StructuredCommunication' that also validates the checksum of the communication. After the structured communication, the stream needs to end.
-parseCommunicationE :: Stream s Identity Char =>
+parseCommunicationE ::
+  Stream s Identity Char =>
   -- | The stream that is parsed into a 'StructuredCommunication'
   s ->
   -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
@@ -325,13 +328,13 @@ parseCommunicationE :: Stream s Identity Char =>
 parseCommunicationE = runParser communicationEParser () ""
 
 -- | Parsing a stream into a 'StructuredCommunication' that does /noet/ validate the checksum of the communication. After the structured communication, the stream needs to end.
-parseCommunicationE' :: Stream s Identity Char =>
+parseCommunicationE' ::
+  Stream s Identity Char =>
   -- | The stream that is parsed into a 'StructuredCommunication'
   s ->
   -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
   Either ParseError StructuredCommunication
 parseCommunicationE' = runParser communicationEParser' () ""
-
 
 _liftEither :: Show s => MonadFail m => Either s a -> m a
 _liftEither = either (fail . show) pure
