@@ -40,7 +40,7 @@ spec = do
   it "div" (property (_testEq2Inc div div))
   it "mod" (property (_testEq2Inc mod mod))
   -- it "all are valid in an arbitrary range" (property (\x1 -> all isValid . enumFromTo x1 :: StructuredCommunication -> Bool))
-  it "all StructuredCommunications can be parsed back" (property (\x -> runParser parseCommunication' () "" (communicationToString x) == Right x))
+  it "all StructuredCommunications can be parsed back" (property (\x -> parseCommunication' (communicationToString x) == Right x))
 
 patternMatch :: StructuredCommunication -> Bool
 -- patternMatch [beCommunication|+++999/9999/99901+++|] = True -- raises a compile error, expected behavior
