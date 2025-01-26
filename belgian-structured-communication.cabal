@@ -1,5 +1,5 @@
 name:                belgian-structured-communication
-version:             0.1.0.0
+version:             0.2.0.0
 synopsis:  parsing, rendering and manipulating the structured communication of Belgian financial transactions.
 description:
   A package that exports a 'StructuredCommunication' data type that can render and manipulate structured
@@ -28,6 +28,7 @@ library
     , hashable >= 1.0
     , parsec >=3.0
     , QuickCheck >=2.1
+    , random >=1.2
     , template-haskell >=2.3.0.0
     , text >= 0.1
     , validity >= 0.4.0.0

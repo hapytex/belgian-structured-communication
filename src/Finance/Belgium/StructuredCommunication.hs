@@ -78,6 +78,8 @@ import Text.Parsec.Char (char, digit, space)
 import Text.Parsec.Combinator (eof)
 import Text.Parsec.Prim (ParsecT, Stream, runParser, skipMany, try)
 import Text.Printf (printf)
+import System.Random(Random)
+import System.Random.Internal(Uniform(uniformM), UniformRange(uniformRM))
 
 -- | A data type that stores three numbers: one with three digits (@000–999@), four digits (@0000–9999@) and five digits (@00001–99997@). The data
 -- constructor itself is not accessible, since the `StructuredCommunication` could produce objects that are out of the given ranges, or where the
@@ -117,6 +119,14 @@ instance Num StructuredCommunication where
 
 _both :: (a -> b) -> (a, a) -> (b, b)
 _both f ~(x, y) = (f x, f y)
+
+instance Random StructuredCommunication
+
+instance Uniform StructuredCommunication where
+  uniformM g = _toEnum <$> uniformRM (0, _maxVal) g
+
+instance UniformRange StructuredCommunication where
+  uniformRM (s0, s1) g = _toEnum <$> (uniformRM (_fromEnum s0, _fromEnum s1) g)
 
 instance Real StructuredCommunication where
   toRational = toRational . toInteger
