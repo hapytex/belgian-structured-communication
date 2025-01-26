@@ -71,6 +71,8 @@ import Language.Haskell.TH.Syntax (Exp (AppE, ConE, LitE), Lift (lift, liftTyped
 #else
 import Language.Haskell.TH.Syntax (Exp (AppE, ConE, LitE), Lift (lift), Lit (IntegerL), Pat (ConP, LitP))
 #endif
+import System.Random (Random)
+import System.Random.Internal (Uniform (uniformM), UniformRange (uniformRM))
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
 import Test.QuickCheck.Gen (choose)
 import Text.Parsec (ParseError)
@@ -78,18 +80,16 @@ import Text.Parsec.Char (char, digit, space)
 import Text.Parsec.Combinator (eof)
 import Text.Parsec.Prim (ParsecT, Stream, runParser, skipMany, try)
 import Text.Printf (printf)
-import System.Random(Random)
-import System.Random.Internal(Uniform(uniformM), UniformRange(uniformRM))
 
 -- | A data type that stores three numbers: one with three digits (@000–999@), four digits (@0000–9999@) and five digits (@00001–99997@). The data
 -- constructor itself is not accessible, since the `StructuredCommunication` could produce objects that are out of the given ranges, or where the
 -- checksum is not valid. The module thus aims to prevent parsing, changing, etc. 'StructuredCommunication' objects into an invalid state.
 data StructuredCommunication = StructuredCommunication !Word16 !Word16 !Word32 deriving (Data, Eq, Generic, Ord, Read, Typeable)
 
-_maxVal :: Integral a => a
+_maxVal :: (Integral a) => a
 _maxVal = 9999999999
 
-_numVals :: Integral a => a
+_numVals :: (Integral a) => a
 _numVals = 10000000000
 
 _fromEnum :: StructuredCommunication -> Int64
@@ -153,7 +153,7 @@ checksum ::
   Word32
 checksum (StructuredCommunication _ _ v₂) = v₂ `mod` 100
 
-_rcheck :: Integral i => Integer -> i -> Bool
+_rcheck :: (Integral i) => Integer -> i -> Bool
 _rcheck mx = go
   where
     go v = 0 <= i && i <= mx where i = fromIntegral v
@@ -263,23 +263,23 @@ _parseNatWidth m
     go 0 v = pure v
     go n v = digit >>= go (n - 1) . ((10 * v) +) . fromIntegral . digitToInt
 
-_char3 :: Stream s m Char => Char -> ParsecT s u m Char
+_char3 :: (Stream s m Char) => Char -> ParsecT s u m Char
 _char3 c = c' <* c' <* c'
   where
     c' = char c
 
-_presuf :: Stream s m Char => ParsecT s u m Char
+_presuf :: (Stream s m Char) => ParsecT s u m Char
 _presuf = try (_char3 '+') <|> _char3 '*'
 
-_slash :: Stream s m Char => ParsecT s u m Char
+_slash :: (Stream s m Char) => ParsecT s u m Char
 _slash = _space *> char '/' <* _space
 
-_space :: Stream s m Char => ParsecT s u m ()
+_space :: (Stream s m Char) => ParsecT s u m ()
 _space = skipMany space
 
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also does /not/ (per se) ends with an 'eof'.
 communicationParser' ::
-  Stream s m Char =>
+  (Stream s m Char) =>
   -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
 communicationParser' = do
@@ -291,28 +291,28 @@ communicationParser' = do
 
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' is checked for its validity (checksum). The parser does /not/ (per se) ends with an 'eof'.
 communicationParser ::
-  Stream s m Char =>
+  (Stream s m Char) =>
   -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
 communicationParser = communicationParser' >>= _liftEither . prettyValidate
 
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' can be invalid. The parser also checks if this is the end of the stream.
 communicationEParser' ::
-  Stream s m Char =>
+  (Stream s m Char) =>
   -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
 communicationEParser' = communicationParser <* eof
 
 -- | A 'ParsecT' that parses a string into a 'StructuredCommunication', the 'StructuredCommunication' is checked for its validity (checksum). The parser also checks that this is the end of the stream.
 communicationEParser ::
-  Stream s m Char =>
+  (Stream s m Char) =>
   -- | The 'ParsecT' object that parses the structured communication of the form @+++000\/0000\/00097+++@.
   ParsecT s u m StructuredCommunication
 communicationEParser = communicationEParser' >>= _liftEither . prettyValidate
 
 -- | Parsing a stream into a 'StructuredCommunication' that also validates the checksum of the communication. The stream does not per se needs to end with structured communcation.
 parseCommunication ::
-  Stream s Identity Char =>
+  (Stream s Identity Char) =>
   -- | The stream that is parsed into a 'StructuredCommunication'
   s ->
   -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
@@ -321,7 +321,7 @@ parseCommunication = runParser communicationParser () ""
 
 -- | Parsing a stream into a 'StructuredCommunication' that does /noet/ validate the checksum of the communication. The stream does not per se needs to end with structured communcation.
 parseCommunication' ::
-  Stream s Identity Char =>
+  (Stream s Identity Char) =>
   -- | The stream that is parsed into a 'StructuredCommunication'
   s ->
   -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
@@ -330,7 +330,7 @@ parseCommunication' = runParser communicationParser' () ""
 
 -- | Parsing a stream into a 'StructuredCommunication' that also validates the checksum of the communication. After the structured communication, the stream needs to end.
 parseCommunicationE ::
-  Stream s Identity Char =>
+  (Stream s Identity Char) =>
   -- | The stream that is parsed into a 'StructuredCommunication'
   s ->
   -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
@@ -339,14 +339,14 @@ parseCommunicationE = runParser communicationEParser () ""
 
 -- | Parsing a stream into a 'StructuredCommunication' that does /noet/ validate the checksum of the communication. After the structured communication, the stream needs to end.
 parseCommunicationE' ::
-  Stream s Identity Char =>
+  (Stream s Identity Char) =>
   -- | The stream that is parsed into a 'StructuredCommunication'
   s ->
   -- | The result of parsing, either a 'StructuredCommunication' wrapped in a 'Right' or a parsing error wrapped in a 'Left'.
   Either ParseError StructuredCommunication
 parseCommunicationE' = runParser communicationEParser' () ""
 
-_liftEither :: Show s => MonadFail m => Either s a -> m a
+_liftEither :: (Show s) => (MonadFail m) => Either s a -> m a
 _liftEither = either (fail . show) pure
 
 _toPattern :: StructuredCommunication -> Pat
