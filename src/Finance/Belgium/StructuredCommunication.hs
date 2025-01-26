@@ -126,7 +126,7 @@ instance Uniform StructuredCommunication where
   uniformM g = _toEnum <$> uniformRM (0, _maxVal) g
 
 instance UniformRange StructuredCommunication where
-  uniformRM (s0, s1) g = _toEnum <$> (uniformRM (_fromEnum s0, _fromEnum s1) g)
+  uniformRM (s0, s1) g = _toEnum <$> uniformRM (_fromEnum s0, _fromEnum s1) g
 
 instance Real StructuredCommunication where
   toRational = toRational . toInteger
