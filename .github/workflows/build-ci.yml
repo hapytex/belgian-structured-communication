@@ -5,7 +5,7 @@ jobs:
   linux1:
     strategy:
       matrix:
-        resolver: [lts-13, lts-14, lts-15, lts-16, lts-17, lts-18, lts-19, lts-20, lts-21, lts-22, lts-23]
+        resolver: [lts-16, lts-17, lts-18, lts-19, lts-20, lts-21, lts-22, lts-23]
     name: Build the Haskell software
     runs-on: ubuntu-latest
     steps:
@@ -22,7 +22,7 @@ jobs:
   linux2:
     strategy:
       matrix:
-        resolver: [lts-13, lts-14, lts-15, lts-16, lts-17, lts-18, lts-19, lts-20, lts-21, lts-22, lts-23]
+        resolver: [lts-16, lts-17, lts-18, lts-19, lts-20, lts-21, lts-22, lts-23]
     name: Build the Haddock documentation
     runs-on: ubuntu-latest
     steps:
@@ -78,7 +78,7 @@ jobs:
   linux6:
     strategy:
       matrix:
-        resolver: [lts-13, lts-14, lts-15, lts-16, lts-17, lts-18, lts-19, lts-20, lts-21, lts-22, lts-23]
+        resolver: [lts-16, lts-17, lts-18, lts-19, lts-20, lts-21, lts-22, lts-23]
     name: Run the tests
     runs-on: ubuntu-latest
     steps:
